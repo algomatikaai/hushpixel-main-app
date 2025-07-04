@@ -104,11 +104,128 @@ export class AdminDashboardService {
       teamAccountsPromise,
     ]);
 
+    // Get generations count
+    const { count: generations } = await this.client
+      .from('generations')
+      .select('*', selectParams);
+
+    // Get recent analytics metrics
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Get conversion rate (simplified calculation)
+    const { data: recentEvents } = await this.client
+      .from('user_journey_events')
+      .select('event_type, event_name, user_id')
+      .gte('created_at', thirtyDaysAgo.toISOString())
+      .in('event_name', ['quiz_started', 'subscription_created']);
+
+    let conversionRate = 0;
+    if (recentEvents) {
+      const quizStarts = recentEvents.filter(e => e.event_name === 'quiz_started').length;
+      const subscriptions = recentEvents.filter(e => e.event_name === 'subscription_created').length;
+      conversionRate = quizStarts > 0 ? (subscriptions / quizStarts) * 100 : 0;
+    }
+
     return {
       subscriptions,
       trials,
       accounts,
       teamAccounts,
+      generations: generations || 0,
+      conversionRate,
+    };
+  }
+
+  /**
+   * Get comprehensive business metrics for enhanced dashboard
+   */
+  async getEnhancedDashboardData() {
+    const basicData = await this.getDashboardData();
+    
+    // Get additional metrics
+    const [revenueData, errorData, userActivityData] = await Promise.all([
+      this.getRevenueMetrics(),
+      this.getErrorMetrics(),
+      this.getUserActivityMetrics()
+    ]);
+
+    return {
+      ...basicData,
+      revenue: revenueData,
+      errors: errorData,
+      userActivity: userActivityData
+    };
+  }
+
+  /**
+   * Get revenue metrics
+   */
+  private async getRevenueMetrics() {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Get revenue data from subscriptions
+    const { data: subscriptionData } = await this.client
+      .from('subscriptions')
+      .select('status, created_at')
+      .eq('status', 'active');
+
+    // Simplified revenue calculation (would need actual pricing data in production)
+    const monthlyRevenue = (subscriptionData?.length || 0) * 20; // Assuming $20/month average
+    const avgRevenuePerUser = subscriptionData && subscriptionData.length > 0 ? monthlyRevenue / subscriptionData.length : 0;
+
+    return {
+      monthlyRevenue,
+      avgRevenuePerUser,
+      activeSubscriptions: subscriptionData?.length || 0
+    };
+  }
+
+  /**
+   * Get error metrics
+   */
+  private async getErrorMetrics() {
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+    const { count: totalErrors } = await this.client
+      .from('error_tracking')
+      .select('*', { count: 'estimated', head: true })
+      .gte('created_at', twentyFourHoursAgo.toISOString());
+
+    const { count: criticalErrors } = await this.client
+      .from('error_tracking')
+      .select('*', { count: 'estimated', head: true })
+      .eq('severity', 'critical')
+      .gte('created_at', twentyFourHoursAgo.toISOString());
+
+    return {
+      totalErrors: totalErrors || 0,
+      criticalErrors: criticalErrors || 0
+    };
+  }
+
+  /**
+   * Get user activity metrics
+   */
+  private async getUserActivityMetrics() {
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+    const { count: activeUsers } = await this.client
+      .from('user_journey_events')
+      .select('user_id', { count: 'estimated', head: true })
+      .gte('created_at', twentyFourHoursAgo.toISOString());
+
+    const { count: dailyGenerations } = await this.client
+      .from('generations')
+      .select('*', { count: 'estimated', head: true })
+      .gte('created_at', twentyFourHoursAgo.toISOString());
+
+    return {
+      activeUsers: activeUsers || 0,
+      dailyGenerations: dailyGenerations || 0
     };
   }
 }

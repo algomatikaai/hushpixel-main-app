@@ -17,6 +17,7 @@ import { UserNotifications } from '~/home/(user)/_components/user-notifications'
 // home imports
 import type { UserWorkspace } from '../_lib/server/load-user-workspace';
 import { HomeAccountSelector } from './home-account-selector';
+import { UpgradePrompt } from './upgrade-prompt';
 
 interface HomeSidebarProps {
   workspace: UserWorkspace;
@@ -51,6 +52,11 @@ export function HomeSidebar(props: HomeSidebarProps) {
 
       <SidebarContent>
         <SidebarNavigation config={personalAccountNavigationConfig} />
+        
+        {/* Upgrade prompt for free users */}
+        <div className="mt-auto px-4 pb-4">
+          <UpgradePrompt userId={user.id} />
+        </div>
       </SidebarContent>
 
       <SidebarFooter>

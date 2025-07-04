@@ -71,15 +71,15 @@ const featuresFlagConfig = FeatureFlagsSchema.parse({
   ),
   enableTeamAccounts: getBoolean(
     process.env.NEXT_PUBLIC_ENABLE_TEAM_ACCOUNTS,
-    true,
+    false,
   ),
   enableTeamCreation: getBoolean(
     process.env.NEXT_PUBLIC_ENABLE_TEAM_ACCOUNTS_CREATION,
-    true,
+    false,
   ),
   enablePersonalAccountBilling: getBoolean(
     process.env.NEXT_PUBLIC_ENABLE_PERSONAL_ACCOUNT_BILLING,
-    false,
+    true,
   ),
   enableTeamAccountBilling: getBoolean(
     process.env.NEXT_PUBLIC_ENABLE_TEAM_ACCOUNTS_BILLING,

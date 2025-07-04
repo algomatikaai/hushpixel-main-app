@@ -20,7 +20,7 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 // local imports
 import { HomeLayoutPageHeader } from '../_components/home-page-header';
 import { createPersonalAccountBillingPortalSession } from '../billing/_lib/server/server-actions';
-import { PersonalAccountCheckoutForm } from './_components/personal-account-checkout-form';
+import { EnhancedSubscriptionManagement } from './_components/enhanced-subscription-management';
 import { loadPersonalAccountBillingPageData } from './_lib/server/personal-account-billing-page.loader';
 
 export const generateMetadata = async () => {
@@ -62,43 +62,12 @@ async function PersonalAccountBillingPage() {
       />
 
       <PageBody>
-        <div className={'flex flex-col space-y-4'}>
-          <If condition={!data}>
-            <PersonalAccountCheckoutForm customerId={customerId} />
-
-            <If condition={customerId}>
-              <CustomerBillingPortalForm />
-            </If>
-          </If>
-
-          <If condition={data}>
-            {(data) => (
-              <div className={'flex w-full max-w-2xl flex-col space-y-6'}>
-                {'active' in data ? (
-                  <CurrentSubscriptionCard
-                    subscription={data}
-                    product={productPlan!.product}
-                    plan={productPlan!.plan}
-                  />
-                ) : (
-                  <CurrentLifetimeOrderCard
-                    order={data}
-                    product={productPlan!.product}
-                    plan={productPlan!.plan}
-                  />
-                )}
-
-                <If condition={!data}>
-                  <PersonalAccountCheckoutForm customerId={customerId} />
-                </If>
-
-                <If condition={customerId}>
-                  <CustomerBillingPortalForm />
-                </If>
-              </div>
-            )}
-          </If>
-        </div>
+        <EnhancedSubscriptionManagement 
+          user={user}
+          subscriptionData={data}
+          productPlan={productPlan}
+          customerId={customerId}
+        />
       </PageBody>
     </>
   );

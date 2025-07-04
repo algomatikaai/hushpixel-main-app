@@ -64,14 +64,14 @@ const AppConfigSchema = z
   );
 
 const appConfig = AppConfigSchema.parse({
-  name: process.env.NEXT_PUBLIC_PRODUCT_NAME,
-  title: process.env.NEXT_PUBLIC_SITE_TITLE,
-  description: process.env.NEXT_PUBLIC_SITE_DESCRIPTION,
-  url: process.env.NEXT_PUBLIC_SITE_URL,
-  locale: process.env.NEXT_PUBLIC_DEFAULT_LOCALE,
-  theme: process.env.NEXT_PUBLIC_DEFAULT_THEME_MODE,
-  themeColor: process.env.NEXT_PUBLIC_THEME_COLOR,
-  themeColorDark: process.env.NEXT_PUBLIC_THEME_COLOR_DARK,
+  name: process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'HushPixel',
+  title: process.env.NEXT_PUBLIC_SITE_TITLE ?? 'HushPixel - Create Your Perfect AI Companion',
+  description: process.env.NEXT_PUBLIC_SITE_DESCRIPTION ?? 'Generate stunning NSFW AI companions and chat with your perfect match. No limits, no censorship.',
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.hushpixel.com',
+  locale: process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? 'en',
+  theme: process.env.NEXT_PUBLIC_DEFAULT_THEME_MODE ?? 'dark',
+  themeColor: process.env.NEXT_PUBLIC_THEME_COLOR ?? '#8B5CF6',
+  themeColorDark: process.env.NEXT_PUBLIC_THEME_COLOR_DARK ?? '#A78BFA',
   production,
 });
 

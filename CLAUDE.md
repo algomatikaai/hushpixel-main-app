@@ -2,6 +2,35 @@
 
 This file provides guidance to Claude Code when working with code in this repository.
 
+## 🎯 **HUSHPIXEL CONTEXT**
+
+**Project**: NSFW AI companion quiz platform targeting $8.3M exit in 24 months  
+**Current Status**: Build fixing phase - mocking APIs for immediate deployment  
+**Revenue Strategy**: Quiz → Email capture → Facebook Pixel → Subscription  
+**Philosophy**: "Lazy Founder" - Money printer first, perfect code later  
+
+### **Current Priority: Mock APIs → Deploy → Revenue**
+We're implementing mocks for missing APIs to get the revenue flow working immediately:
+- Mock ModelsLab API for AI generation (return "coming soon" message)
+- Mock analytics services (console logging)
+- Focus on email capture + Facebook Pixel tracking
+
+### **HushPixel-Specific Files**
+- **Quiz Implementation**: `/apps/web/app/quiz/` (complete, working)
+- **Environment Config**: `.env.production` (Supabase + Pixel ID ready)
+- **Mock APIs**: `/apps/web/lib/modelslab-api.ts` (needs creation)
+- **Facebook Pixel**: Embedded in quiz, ID `24219411987653826`
+
+### **Known Build Issues**
+1. Missing ModelsLab API → Mock implementation needed
+2. Missing analytics service → Already commented out
+3. Progress component imports → Use `@kit/ui/shadcn/progress`
+
+### **Revenue Flow Architecture**
+```
+Quiz (/quiz) → Character Selection (TOP 4) → Body Type (TOP 3) → Email Capture → "Generation Coming Soon" → Facebook Pixel Events
+```
+
 ### Core Technologies
 
 - **Next.js 15** with App Router and Turbopack

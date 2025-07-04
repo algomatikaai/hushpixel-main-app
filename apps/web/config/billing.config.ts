@@ -1,8 +1,62 @@
-/*
-Replace this file with your own billing configuration file.
-Copy it from billing.sample.config.ts and update the configuration to match your billing provider and products.
-This file will never be overwritten by git updates
+/**
+ * HushPixel Billing Configuration
+ * Simple two-tier pricing model optimized for conversion
  */
-import sampleSchema from './billing.sample.config';
+import { BillingProviderSchema, createBillingSchema } from '@kit/billing';
 
-export default sampleSchema;
+// The billing provider to use
+const provider = BillingProviderSchema.parse('stripe');
+
+export default createBillingSchema({
+  provider,
+  products: [
+    {
+      id: 'premium',
+      name: 'Premium',
+      description: 'Unlimited AI companions and conversations',
+      currency: 'USD',
+      badge: 'Most Popular',
+      highlighted: true,
+      plans: [
+        {
+          name: 'Premium Monthly',
+          id: 'premium-monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: process.env.HUSHPIXEL_PREMIUM_PRICE_ID || 'price_test_mock_monthly',
+              name: 'Premium',
+              cost: 24.99,
+              type: 'flat' as const,
+            },
+          ],
+        },
+        {
+          name: 'Premium Annual',
+          id: 'premium-annual',
+          paymentType: 'recurring',
+          interval: 'year',
+          lineItems: [
+            {
+              id: process.env.HUSHPIXEL_PREMIUM_ANNUAL_PRICE_ID || 'price_test_mock_annual',
+              name: 'Premium Annual',
+              cost: 199.99, // $16.67/month when billed annually (33% savings)
+              type: 'flat' as const,
+            },
+          ],
+        },
+      ],
+      features: [
+        '✨ Unlimited HD generations',
+        '💬 Unlimited conversations', 
+        '🎨 Character consistency',
+        '💾 Private gallery',
+        '⚡ Priority generation',
+        '🔒 No content restrictions',
+        '❌ No ads',
+        '📱 Mobile & desktop access'
+      ],
+    },
+  ],
+});
