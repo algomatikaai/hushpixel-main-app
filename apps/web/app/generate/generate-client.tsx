@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Badge } from '@kit/ui/badge';
 import { ScrollArea } from '@kit/ui/scroll-area';
 import { Separator } from '@kit/ui/separator';
-import { Loader2, Sparkles, Crown, Download, Heart, History, RefreshCw, AlertCircle, X, ChevronLeft, ChevronRight, Timer, Zap, Users, Star } from 'lucide-react';
+import { Loader2, Sparkles, Crown, Download, Heart, History, RefreshCw, AlertCircle, X, ChevronLeft, ChevronRight, Timer, Zap, Users, Star, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Import our new components
