@@ -522,7 +522,7 @@ export const envVariables: EnvVariableModel[] = [
     name: 'STRIPE_SECRET_KEY',
     description: 'Your Stripe secret key.',
     category: 'Billing',
-    hint: `Ex. sk_test_xxxxxxxxxxxxxxxxxxxxxxxx`,
+    hint: `Ex. sk_test_PLACEHOLDER_KEY`,
     secret: true,
     type: 'string',
     contextualValidation: {
@@ -561,7 +561,7 @@ export const envVariables: EnvVariableModel[] = [
     name: 'STRIPE_WEBHOOK_SECRET',
     description: 'Your Stripe webhook secret.',
     category: 'Billing',
-    hint: `Ex. whsec_123456789012345678901234`,
+    hint: `Ex. whsec_XXXXXXXXXXXXXXXXXXXXXXXXXX`,
     secret: true,
     type: 'string',
     contextualValidation: {
