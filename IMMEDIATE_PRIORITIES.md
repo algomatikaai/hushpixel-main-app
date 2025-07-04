@@ -87,7 +87,7 @@ netlify deploy --prod --dir=.next
 In Netlify Dashboard → Site Settings → Environment Variables:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://serasizemsbamdcblwkt.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlcmFzaXplbXNiYW1rY2Jsd2t0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1NTQ0NDQsImV4cCI6MjA2NzEzMDQ0NH0.uVPB0JhWikC7grFwx8NxtAxVn6_jvQkEKZJYIxiiggQ
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key-here
 NEXT_PUBLIC_FACEBOOK_PIXEL_ID=24219411987653826
 NEXT_PUBLIC_SITE_URL=https://your-site-name.netlify.app
 ```

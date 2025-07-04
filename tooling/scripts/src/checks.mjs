@@ -2,11 +2,11 @@ import { readFileSync, readdirSync } from 'fs';
 import * as path from 'path';
 
 const whitelist = {
-  STRIPE_SECRET_KEY: [/sk_test_*/],
-  STRIPE_WEBHOOK_SECRET: [/whsec_*/],
+  STRIPE_SECRET_KEY: [/sk_test_PLACEHOLDER/],
+  STRIPE_WEBHOOK_SECRET: [/whsec_PLACEHOLDER/],
   EMAIL_PASSWORD: ['password'],
   SUPABASE_DB_WEBHOOK_SECRET: ['WEBHOOKSECRET'],
-  SUPABASE_SERVICE_ROLE_KEY: [/qQwv8Hdp7fsn3W0YpN81IU/],
+  SUPABASE_SERVICE_ROLE_KEY: [/PLACEHOLDER_SERVICE_KEY/],
 };
 
 // List of sensitive environment variables that should not be in .env files

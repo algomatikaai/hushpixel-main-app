@@ -114,7 +114,7 @@ ls -la apps/web/.next
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://serasizemsbamdcblwkt.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key-here
 NEXT_PUBLIC_FACEBOOK_PIXEL_ID=24219411987653826
 NEXT_PUBLIC_SITE_URL=https://hushpixel-app.netlify.app
 NEXT_PUBLIC_PRODUCT_NAME=HushPixel
