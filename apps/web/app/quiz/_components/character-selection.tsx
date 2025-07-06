@@ -19,28 +19,28 @@ const characterOptions: CharacterOption[] = [
     id: 'asian-beauty',
     name: 'Asian Beauty',
     description: 'Elegant and graceful',
-    imageUrl: '/images/quiz/lovable-uploads/5b6787b5-37d5-4b41-8b00-72f6da3f86dd.png',
+    imageUrl: '/images/quiz/5b6787b5-37d5-4b41-8b00-72f6da3f86dd.png',
     percentage: '26.8%' // Top performer
   },
   {
     id: 'brunette-beauty',
     name: 'Brunette Beauty', 
     description: 'Sophisticated and alluring',
-    imageUrl: '/images/quiz/lovable-uploads/487244c4-b3c9-4500-86dd-c372a1872873.png',
+    imageUrl: '/images/quiz/487244c4-b3c9-4500-86dd-c372a1872873.png',
     percentage: '14.3%'
   },
   {
     id: 'redhead-model',
     name: 'Redhead Model',
     description: 'Fiery and captivating',
-    imageUrl: '/images/quiz/lovable-uploads/23ce552f-7688-4789-b92f-dd809addcd10.png',
+    imageUrl: '/images/quiz/23ce552f-7688-4789-b92f-dd809addcd10.png',
     percentage: '14.3%'
   },
   {
     id: 'blonde-companion',
     name: 'Blonde Companion',
     description: 'Classic and charming',
-    imageUrl: '/images/quiz/lovable-uploads/1f881da4-493c-4a6f-ac50-b55a69d00bbe.png',
+    imageUrl: '/images/quiz/1f881da4-493c-4a6f-ac50-b55a69d00bbe.png',
     percentage: '14.3%'
   }
 ];
