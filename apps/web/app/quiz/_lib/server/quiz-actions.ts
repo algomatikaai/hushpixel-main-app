@@ -12,11 +12,23 @@ const QuizSubmissionSchema = z.object({
 
 export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema>) {
   try {
+    console.log('🔄 Quiz submission started:', { email: data.email });
+    
     // Validate input data
     const validatedData = QuizSubmissionSchema.parse(data);
+    console.log('✅ Data validation passed');
     
     // Use admin client to create user account without authentication
     const adminClient = getSupabaseServerAdminClient();
+    console.log('✅ Admin client created');
+    
+    // Test admin client connection
+    const { data: testResult, error: testError } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1 });
+    if (testError) {
+      console.error('❌ Admin client connection failed:', testError);
+      return { success: false, error: 'Database connection failed' };
+    }
+    console.log('✅ Admin client connection verified');
     
     // First, check if user already exists
     const { data: existingUser } = await adminClient.auth.admin.getUserByEmail(validatedData.email);
@@ -76,6 +88,7 @@ export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema
     }
 
     // Save the quiz response
+    console.log('🔄 Saving quiz response for user:', userId);
     const { data: quizResponse, error: quizError } = await adminClient
       .from('quiz_responses')
       .insert({
@@ -90,9 +103,16 @@ export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema
       .single();
 
     if (quizError) {
-      console.error('Error saving quiz response:', quizError);
-      return { success: false, error: 'Failed to save quiz data' };
+      console.error('❌ Error saving quiz response:', quizError);
+      console.error('❌ Quiz error details:', {
+        message: quizError.message,
+        details: quizError.details,
+        hint: quizError.hint,
+        code: quizError.code
+      });
+      return { success: false, error: `Database error: ${quizError.message}` };
     }
+    console.log('✅ Quiz response saved successfully:', quizResponse.id);
 
     // Generate a session for the user so they're automatically logged in
     const { data: sessionData, error: sessionError } = await adminClient.auth.admin.generateLink({
@@ -119,7 +139,8 @@ export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema
       }
     };
   } catch (error) {
-    console.error('Quiz submission error:', error);
-    return { success: false, error: 'An unexpected error occurred' };
+    console.error('❌ Quiz submission unexpected error:', error);
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    return { success: false, error: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}` };
   }
 }
