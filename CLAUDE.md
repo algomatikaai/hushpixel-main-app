@@ -5,27 +5,36 @@ This file provides guidance to Claude Code when working with code in this reposi
 ## 🎯 **HUSHPIXEL CONTEXT**
 
 **Project**: NSFW AI companion quiz platform targeting $8.3M exit in 24 months  
-**Current Status**: ⚠️ **DATABASE MIGRATIONS NEEDED** - Authentication blocked  
+**Current Status**: 🔴 **QUIZ SUBMISSION BLOCKED** - Revenue flow at 0%  
 **Revenue Strategy**: Quiz → Email capture → Facebook Pixel → Subscription  
 **Philosophy**: "Lazy Founder" - Money printer first, perfect code later  
 
-### **IMMEDIATE PRIORITY: Fix Authentication (5 minutes)**
-App is deployed and working, but users can't authenticate due to missing database schema:
-- **Issue**: Database migrations haven't been pushed to production Supabase
-- **Solution**: Run `pnpm --filter web supabase db push --password "Hushpixel10m!"`
-- **Credentials**: Access token `sbp_29ecde693eebec0e31e626bf499d0d133a801295` (already set)
-- **Result**: Fixes all user authentication, billing, and bridge auth issues
+### **IMMEDIATE PRIORITY: Fix Quiz Submission (30 minutes)**
+✅ Authentication working, ✅ Facebook Pixel tracking, ❌ Quiz email submission failing:
+- **Issue**: `TypeError: r.auth.admin.getUserByEmail is not a function` - Admin client broken
+- **Solution**: Bypass admin client, use regular Supabase client for quiz responses
+- **Implementation**: Make `user_id` nullable, save quiz data without user creation
+- **Result**: Restores complete revenue flow Quiz → Auth → Generation
+
+### **July 6, 2025 Session Results**
+✅ **Authentication**: Users can sign up/sign in successfully  
+✅ **Facebook Pixel**: Complete conversion tracking implemented  
+✅ **Database**: All migrations pushed to production  
+✅ **Environment**: All variables correctly configured  
+❌ **Quiz Submission**: Admin client `auth.admin` methods unavailable  
 
 ### **HushPixel-Specific Files**
-- **Quiz Implementation**: `/apps/web/app/quiz/` (complete, working)
-- **Environment Config**: `.env.production` (Supabase + Pixel ID ready)
-- **Mock APIs**: `/apps/web/lib/modelslab-api.ts` (needs creation)
-- **Facebook Pixel**: Embedded in quiz, ID `24219411987653826`
+- **Quiz Implementation**: `/apps/web/app/quiz/` (✅ UI working, ❌ submission blocked)
+- **Environment Config**: `.env.production` (✅ fully configured)
+- **Facebook Pixel**: `/apps/web/app/quiz/_components/facebook-pixel.tsx` (✅ complete tracking)
+- **Quiz Action**: `/apps/web/app/quiz/_lib/server/quiz-actions.ts` (❌ admin client error)
 
-### **Known Build Issues**
-1. Missing ModelsLab API → Mock implementation needed
-2. Missing analytics service → Already commented out
-3. Progress component imports → Use `@kit/ui/shadcn/progress`
+### **Current Technical Status**
+✅ Vercel deployment working  
+✅ Supabase database operational  
+✅ Authentication system functional  
+✅ Facebook Pixel events tracking  
+❌ Quiz email submission failing - blocks revenue flow
 
 ### **Revenue Flow Architecture**
 ```
