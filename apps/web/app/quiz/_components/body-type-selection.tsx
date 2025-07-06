@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
 import Image from 'next/image';
+import { trackFBQuizStep } from './facebook-pixel';
 
 interface BodyTypeOption {
   id: string;
@@ -47,6 +48,16 @@ export function BodyTypeSelection({ onSelect }: BodyTypeSelectionProps) {
 
   const handleSelect = (bodyTypeId: string) => {
     setSelectedBodyType(bodyTypeId);
+    
+    // Track Facebook Pixel event
+    const selectedOption = bodyTypeOptions.find(option => option.id === bodyTypeId);
+    trackFBQuizStep('Body Type Selection', {
+      body_type: bodyTypeId,
+      body_type_name: selectedOption?.name,
+      percentage: selectedOption?.percentage,
+      content_category: 'body_type_selection'
+    });
+    
     // Small delay for visual feedback
     setTimeout(() => {
       onSelect(bodyTypeId);

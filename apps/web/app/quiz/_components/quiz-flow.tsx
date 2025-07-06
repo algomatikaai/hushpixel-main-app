@@ -11,6 +11,7 @@ import { CharacterSelection } from './character-selection';
 import { BodyTypeSelection } from './body-type-selection';
 import { EmailCapture } from './email-capture';
 import { submitQuizAction } from '../_lib/server/quiz-actions';
+import { trackFBQuizComplete, trackFBQuizEvent } from './facebook-pixel';
 
 type QuizStep = 'character' | 'body-type' | 'email' | 'completed';
 
@@ -39,12 +40,27 @@ export function QuizFlow() {
   const handleEmailSubmit = (email: string) => {
     const completeQuizData = { ...quizData, email } as QuizData;
     
+    // Track email capture immediately
+    trackFBQuizEvent('Lead', {
+      content_name: 'Email Captured',
+      content_category: 'email_capture',
+      email: email.substring(0, 3) + '***', // Partial email for privacy
+    });
+    
     startTransition(async () => {
       try {
         const result = await submitQuizAction(completeQuizData);
         
         if (result.success) {
           setCurrentStep('completed');
+          
+          // Track quiz completion with full data
+          trackFBQuizComplete({
+            character_type: result.data.characterType,
+            body_type: result.data.bodyType,
+            user_id: result.data.userId,
+            quiz_id: result.data.quizId,
+          });
           
           // If we have a magic link, use it for auto-authentication
           if (result.data.magicLink) {

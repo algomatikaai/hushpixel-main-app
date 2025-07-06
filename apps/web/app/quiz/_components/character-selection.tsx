@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
 import Image from 'next/image';
+import { trackFBQuizStep } from './facebook-pixel';
 
 interface CharacterOption {
   id: string;
@@ -54,6 +55,16 @@ export function CharacterSelection({ onSelect }: CharacterSelectionProps) {
 
   const handleSelect = (characterId: string) => {
     setSelectedCharacter(characterId);
+    
+    // Track Facebook Pixel event
+    const selectedOption = characterOptions.find(option => option.id === characterId);
+    trackFBQuizStep('Character Selection', {
+      character_type: characterId,
+      character_name: selectedOption?.name,
+      percentage: selectedOption?.percentage,
+      content_category: 'character_selection'
+    });
+    
     // Small delay for visual feedback
     setTimeout(() => {
       onSelect(characterId);
