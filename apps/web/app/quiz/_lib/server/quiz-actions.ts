@@ -45,6 +45,34 @@ export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema
       }
       
       userId = newUser.user.id;
+      
+      // Wait a moment for the account trigger to create the accounts record
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Verify the account was created, if not create it manually
+      const { data: accountExists } = await adminClient
+        .from('accounts')
+        .select('id')
+        .eq('id', userId)
+        .single();
+        
+      if (!accountExists) {
+        console.log('Account not created by trigger, creating manually...');
+        const { error: accountError } = await adminClient
+          .from('accounts')
+          .insert({
+            id: userId,
+            primary_owner_user_id: userId,
+            name: validatedData.email.split('@')[0],
+            email: validatedData.email,
+            is_personal_account: true,
+          });
+          
+        if (accountError) {
+          console.error('Error creating account:', accountError);
+          // Continue anyway - we can still save the quiz response
+        }
+      }
     }
 
     // Save the quiz response
