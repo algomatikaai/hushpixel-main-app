@@ -19,19 +19,30 @@ export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema
     console.log('✅ Data validation passed');
     
     // Use admin client to create user account without authentication
-    const adminClient = getSupabaseServerAdminClient();
-    console.log('✅ Admin client created');
+    let adminClient;
+    try {
+      adminClient = getSupabaseServerAdminClient();
+      console.log('✅ Admin client created');
+    } catch (error) {
+      console.error('❌ Failed to create admin client:', error);
+      return { success: false, error: 'Missing SUPABASE_SERVICE_ROLE_KEY environment variable' };
+    }
     
     // Test admin client connection
     const { data: testResult, error: testError } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1 });
     if (testError) {
       console.error('❌ Admin client connection failed:', testError);
-      return { success: false, error: 'Database connection failed' };
+      console.error('❌ This usually means SUPABASE_SERVICE_ROLE_KEY is wrong or missing');
+      return { success: false, error: 'Invalid service role key - check environment variables' };
     }
     console.log('✅ Admin client connection verified');
     
     // First, check if user already exists
-    const { data: existingUser } = await adminClient.auth.admin.getUserByEmail(validatedData.email);
+    const { data: existingUser, error: getUserError } = await adminClient.auth.admin.getUserByEmail(validatedData.email);
+    if (getUserError) {
+      console.error('❌ Failed to check existing user:', getUserError);
+      return { success: false, error: 'Failed to verify user account' };
+    }
     
     let userId: string;
     
