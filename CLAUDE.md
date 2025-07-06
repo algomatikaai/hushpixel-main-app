@@ -5,15 +5,16 @@ This file provides guidance to Claude Code when working with code in this reposi
 ## 🎯 **HUSHPIXEL CONTEXT**
 
 **Project**: NSFW AI companion quiz platform targeting $8.3M exit in 24 months  
-**Current Status**: Build fixing phase - mocking APIs for immediate deployment  
+**Current Status**: ⚠️ **DATABASE MIGRATIONS NEEDED** - Authentication blocked  
 **Revenue Strategy**: Quiz → Email capture → Facebook Pixel → Subscription  
 **Philosophy**: "Lazy Founder" - Money printer first, perfect code later  
 
-### **Current Priority: Mock APIs → Deploy → Revenue**
-We're implementing mocks for missing APIs to get the revenue flow working immediately:
-- Mock ModelsLab API for AI generation (return "coming soon" message)
-- Mock analytics services (console logging)
-- Focus on email capture + Facebook Pixel tracking
+### **IMMEDIATE PRIORITY: Fix Authentication (5 minutes)**
+App is deployed and working, but users can't authenticate due to missing database schema:
+- **Issue**: Database migrations haven't been pushed to production Supabase
+- **Solution**: Run `pnpm --filter web supabase db push --password "Hushpixel10m!"`
+- **Credentials**: Access token `sbp_29ecde693eebec0e31e626bf499d0d133a801295` (already set)
+- **Result**: Fixes all user authentication, billing, and bridge auth issues
 
 ### **HushPixel-Specific Files**
 - **Quiz Implementation**: `/apps/web/app/quiz/` (complete, working)

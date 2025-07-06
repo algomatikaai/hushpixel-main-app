@@ -45,10 +45,19 @@ export function QuizFlow() {
         
         if (result.success) {
           setCurrentStep('completed');
-          // Redirect to generation page after brief delay
-          setTimeout(() => {
-            router.push('/generate');
-          }, 2000);
+          
+          // If we have a magic link, use it for auto-authentication
+          if (result.data.magicLink) {
+            setTimeout(() => {
+              // Redirect to magic link which will authenticate and redirect to generation
+              window.location.href = result.data.magicLink;
+            }, 2000);
+          } else {
+            // Fallback: redirect to generation page (user may need to sign in)
+            setTimeout(() => {
+              router.push(`/generate?quiz_completed=true&character=${result.data.characterType}&body=${result.data.bodyType}`);
+            }, 2000);
+          }
         } else {
           toast.error('Failed to save quiz data. Please try again.');
         }
