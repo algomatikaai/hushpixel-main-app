@@ -6,4 +6,4 @@ A demo version of this project can be found at [makerkit/next-supabase-saas-kit-
 
 [Please follow the documentation to get started](https://makerkit.dev/docs/next-supabase-turbo/introduction).
 
-**Please remember to update the repository daily**.
+**Please remember to update the repository daily**.# Trigger redeployment
