@@ -1,26 +1,37 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
-import { verifyBridgeToken, generateCharacterName, buildPromptFromQuizData } from '@/lib/bridge-auth';
-import { generateCompanionImage } from '@/lib/modelslab-api';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import GenerateClient from './generate-client';
+import { QuizAutoGenerate } from './quiz-auto-generate';
 
 interface GeneratePageProps {
-  searchParams: Promise<{ token?: string; source?: string }>;
+  searchParams: Promise<{ 
+    token?: string; 
+    source?: string;
+    character?: string;
+    body?: string;
+    email?: string;
+    session?: string;
+  }>;
 }
 
 export default async function GeneratePage({ searchParams }: GeneratePageProps) {
   const params = await searchParams;
-  const { token, source } = params;
+  const { character, body, email, session } = params;
   
-  // Handle bridge token from quiz
-  if (token && source === 'quiz') {
+  // Handle quiz flow - auto-generate based on quiz selections
+  if (character && body && email && session) {
+    console.log('Quiz flow detected:', { character, body, email: email.substring(0, 3) + '***', session });
     return <Suspense fallback={<GenerationLoading />}>
-      <BridgeHandler token={token} />
+      <QuizAutoGenerate 
+        character={character}
+        body={body}
+        email={decodeURIComponent(email)}
+        session={session}
+      />
     </Suspense>;
   }
 
-  // Regular generation page for existing users
+  // Regular generation page for existing users  
   return <GenerateClient />;
 }
 
