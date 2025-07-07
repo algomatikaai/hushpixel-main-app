@@ -22,7 +22,8 @@
 1. **Quiz Email Submission**: Bypassed admin client, using regular Supabase client
 2. **Database Schema**: Made user_id nullable in quiz_responses table
 3. **Automatic Linking**: Added trigger to link quiz responses to users after signup
-4. **Revenue Flow**: Complete funnel now operational
+4. **RLS Policy Fix**: Removed auth.users table access causing permission errors
+5. **Revenue Flow**: Complete funnel now operational
 
 ---
 
