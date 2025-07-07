@@ -58,22 +58,13 @@ export function QuizFlow() {
           trackFBQuizComplete({
             character_type: result.data.characterType,
             body_type: result.data.bodyType,
-            user_id: result.data.userId,
             quiz_id: result.data.quizId,
           });
           
-          // If we have a magic link, use it for auto-authentication
-          if (result.data.magicLink) {
-            setTimeout(() => {
-              // Redirect to magic link which will authenticate and redirect to generation
-              window.location.href = result.data.magicLink;
-            }, 2000);
-          } else {
-            // Fallback: redirect to generation page (user may need to sign in)
-            setTimeout(() => {
-              router.push(`/generate?quiz_completed=true&character=${result.data.characterType}&body=${result.data.bodyType}`);
-            }, 2000);
-          }
+          // Redirect to auth with quiz context
+          setTimeout(() => {
+            window.location.href = result.data.redirectUrl;
+          }, 2000);
         } else {
           toast.error('Failed to save quiz data. Please try again.');
         }
