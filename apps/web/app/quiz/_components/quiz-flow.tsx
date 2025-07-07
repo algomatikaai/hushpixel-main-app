@@ -54,14 +54,24 @@ export function QuizFlow() {
         if (result.success) {
           setCurrentStep('completed');
           
-          // Track quiz completion with full data
+          // Track quiz completion with full data for Facebook Pixel
           trackFBQuizComplete({
             character_type: result.data.characterType,
             body_type: result.data.bodyType,
-            user_id: result.data.userId,
+            email: result.data.email.substring(0, 3) + '***', // Partial email for privacy
+            session_id: result.data.sessionId,
           });
           
-          // Redirect to generation page (user is now logged in)
+          // Store session data in localStorage for stickiness
+          localStorage.setItem('hushpixel_session', JSON.stringify({
+            sessionId: result.data.sessionId,
+            email: result.data.email,
+            characterType: result.data.characterType,
+            bodyType: result.data.bodyType,
+            timestamp: Date.now()
+          }));
+          
+          // Redirect to generation page with session data
           setTimeout(() => {
             window.location.href = result.data.redirectUrl;
           }, 2000);
