@@ -58,10 +58,10 @@ export function QuizFlow() {
           trackFBQuizComplete({
             character_type: result.data.characterType,
             body_type: result.data.bodyType,
-            quiz_id: result.data.quizId,
+            user_id: result.data.userId,
           });
           
-          // Redirect to auth with quiz context
+          // Redirect to generation page (user is now logged in)
           setTimeout(() => {
             window.location.href = result.data.redirectUrl;
           }, 2000);

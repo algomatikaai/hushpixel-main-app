@@ -9,6 +9,11 @@ const QuizSubmissionSchema = z.object({
   email: z.string().email('Valid email is required'),
 });
 
+// Generate a random password for auto-created accounts
+function generateRandomPassword(): string {
+  return Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
+}
+
 export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema>) {
   try {
     console.log('🔄 Quiz submission started:', { email: data.email });
@@ -17,45 +22,49 @@ export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema
     const validatedData = QuizSubmissionSchema.parse(data);
     console.log('✅ Data validation passed');
     
-    // Use regular Supabase client (no admin needed)
+    // Use Supabase client for direct auth signup
     const client = getSupabaseServerClient();
-    console.log('✅ Regular client created');
+    console.log('✅ Client created for auth signup');
     
-    // Save quiz response without user creation
-    const { data: quizResponse, error: quizError } = await client
-      .from('quiz_responses')
-      .insert({
-        email: validatedData.email,
-        character_type: validatedData.characterType,
-        body_type: validatedData.bodyType,
-        completed_at: new Date().toISOString(),
-        source: 'main_app_quiz'
-        // user_id: null - will be linked during actual authentication
-      })
-      .select()
-      .single();
+    // Create user account directly via Supabase auth with quiz data in metadata
+    const { data: authData, error: authError } = await client.auth.signUp({
+      email: validatedData.email,
+      password: generateRandomPassword(), // Auto-generate password
+      options: {
+        data: {
+          character_type: validatedData.characterType,
+          body_type: validatedData.bodyType,
+          quiz_completed: true,
+          quiz_completed_at: new Date().toISOString(),
+          source: 'meta_ads_quiz'
+        }
+      }
+    });
 
-    if (quizError) {
-      console.error('❌ Error saving quiz response:', quizError);
-      console.error('❌ Quiz error details:', {
-        message: quizError.message,
-        details: quizError.details,
-        hint: quizError.hint,
-        code: quizError.code
+    if (authError) {
+      console.error('❌ Error creating user account:', authError);
+      console.error('❌ Auth error details:', {
+        message: authError.message,
+        code: authError.__isAuthError ? 'AUTH_ERROR' : 'UNKNOWN'
       });
-      return { success: false, error: `Database error: ${quizError.message}` };
+      return { success: false, error: `Account creation failed: ${authError.message}` };
     }
     
-    console.log('✅ Quiz response saved successfully:', quizResponse.id);
+    if (!authData.user) {
+      console.error('❌ No user created despite no error');
+      return { success: false, error: 'Account creation failed: No user returned' };
+    }
+    
+    console.log('✅ User account created successfully:', authData.user.id);
 
-    // Return success with redirect information
+    // Return success with generation redirect (user is now logged in)
     return { 
       success: true, 
       data: {
-        quizId: quizResponse.id,
+        userId: authData.user.id,
         characterType: validatedData.characterType,
         bodyType: validatedData.bodyType,
-        redirectUrl: `/auth/sign-up?email=${encodeURIComponent(validatedData.email)}&quiz=${quizResponse.id}&character=${validatedData.characterType}&body=${validatedData.bodyType}`
+        redirectUrl: `/generate?character=${validatedData.characterType}&body=${validatedData.bodyType}&welcome=true`
       }
     };
   } catch (error) {
