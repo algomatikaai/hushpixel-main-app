@@ -263,89 +263,214 @@ function GenerationSuccess({ result, character, body, email }: {
   body: string;
   email: string;
 }) {
+  const [premiumUsers, setPremiumUsers] = useState(Math.floor(Math.random() * 50) + 20);
+  const [timeLeft, setTimeLeft] = useState(23 * 60 + 47); // 23:47
+
+  // Update premium user counter every 15-30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPremiumUsers(prev => prev + Math.floor(Math.random() * 3));
+    }, Math.random() * 15000 + 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Countdown timer for scarcity
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeLeft(prev => prev > 0 ? prev - 1 : 0);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const handleGenerateMore = () => {
-    // Redirect to regular generation page for more creations
-    window.location.href = '/generate';
+    // Redirect back to quiz for new selection
+    window.location.href = '/quiz';
   };
 
   const handleUpgrade = () => {
-    // Redirect to subscription/billing page (MakerKit billing path)
-    window.location.href = '/home/billing?source=quiz_completion';
+    // Store user's companion data for post-signup
+    const companionData = {
+      characterName: result.characterName,
+      character,
+      body,
+      email,
+      imageUrl: result.imageUrl,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('hushpixel_companion', JSON.stringify(companionData));
+    
+    // Direct to seamless signup with billing intent
+    const signupUrl = new URL('/auth/sign-up', window.location.origin);
+    signupUrl.searchParams.set('next', '/home/billing');
+    signupUrl.searchParams.set('intent', 'premium');
+    signupUrl.searchParams.set('source', 'companion_generated');
+    
+    window.location.href = signupUrl.toString();
   };
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-900 p-4">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Hero Section */}
         <div className="text-center">
-          <Badge variant="secondary" className="mb-4">
-            <Sparkles className="w-4 h-4 mr-2" />
-            Your Companion is Ready!
-          </Badge>
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full font-semibold text-sm mb-4">
+            <Sparkles className="w-4 h-4" />
+            Your Dream Companion is Ready!
+          </div>
           
-          <h1 className="text-4xl font-bold mb-2">
+          <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             Meet {result.characterName}
           </h1>
           
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-xl">
             Created based on your perfect match: {character.replace('-', ' ')} with {body} figure
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 items-start">
+        <div className="grid lg:grid-cols-3 gap-8">
           {/* Generated Image */}
-          <Card className="overflow-hidden">
-            <CardContent className="p-0">
-              <img 
-                src={result.imageUrl} 
-                alt={result.characterName}
-                className="w-full h-auto"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/images/placeholder-companion.jpg';
-                }}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Action Panel */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Crown className="w-5 h-5 mr-2 text-primary" />
-                  Your Perfect Match
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="font-semibold text-lg">{result.characterName}</p>
-                  <p className="text-sm text-muted-foreground">Generated just for you</p>
+          <div className="lg:col-span-2">
+            <Card className="overflow-hidden shadow-2xl">
+              <CardContent className="p-0 relative">
+                <img 
+                  src={result.imageUrl} 
+                  alt={result.characterName}
+                  className="w-full h-auto"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/images/placeholder-companion.jpg';
+                  }}
+                />
+                <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+                  {result.characterName}
                 </div>
-                
-                <div className="flex space-x-2">
-                  <Button 
-                    onClick={handleGenerateMore}
-                    variant="outline" 
-                    className="flex-1"
-                  >
-                    <Heart className="w-4 h-4 mr-2" />
-                    Generate More
-                  </Button>
-                  
-                  <Button 
-                    onClick={handleUpgrade}
-                    className="flex-1"
-                  >
-                    <Crown className="w-4 h-4 mr-2" />
-                    Unlock Premium
-                  </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Premium Features & CTAs */}
+          <div className="space-y-6">
+            {/* Social Proof */}
+            <Card className="border-2 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium">Live Activity</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{premiumUsers} online</span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <p className="text-muted-foreground">🔥 {Math.floor(Math.random() * 15) + 12} premium members creating companions right now</p>
+                  <p className="text-muted-foreground">⚡ Premium users generate 8x more companions</p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-secondary/50">
-              <CardContent className="p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-1">Want unlimited generations and premium features?</p>
-                <p className="text-sm font-medium">Upgrade to premium for full access!</p>
+            {/* Locked Features Preview */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">🔒 Premium Features</CardTitle>
+                <p className="text-sm text-muted-foreground">Unlock {result.characterName}'s full potential</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Locked Feature 1: Poses */}
+                <div className="relative">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="aspect-square bg-gray-200 rounded-lg relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-400/60 to-pink-400/60 backdrop-blur-sm flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">🔒</span>
+                      </div>
+                    </div>
+                    <div className="aspect-square bg-gray-200 rounded-lg relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-400/60 to-pink-400/60 backdrop-blur-sm flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">🔒</span>
+                      </div>
+                    </div>
+                    <div className="aspect-square bg-gray-200 rounded-lg relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-400/60 to-pink-400/60 backdrop-blur-sm flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">🔒</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium mt-2">47+ Custom Poses</p>
+                  <p className="text-xs text-muted-foreground">Sitting, standing, lying down & more</p>
+                </div>
+
+                {/* Locked Feature 2: Outfits */}
+                <div className="relative">
+                  <div className="grid grid-cols-4 gap-1">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="aspect-square bg-gray-200 rounded-md relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-400/60 to-pink-400/60 backdrop-blur-sm flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">🔒</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-sm font-medium mt-2">23+ Outfit Styles</p>
+                  <p className="text-xs text-muted-foreground">Lingerie, bikinis, costumes & more</p>
+                </div>
+
+                {/* Locked Feature 3: Backgrounds */}
+                <div className="relative">
+                  <div className="grid grid-cols-3 gap-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="aspect-video bg-gray-200 rounded-md relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-400/60 to-pink-400/60 backdrop-blur-sm flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">🔒</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-sm font-medium mt-2">15+ Backgrounds</p>
+                  <p className="text-xs text-muted-foreground">Bedroom, beach, studio & more</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Scarcity & Upgrade CTA */}
+            <Card className="border-2 border-orange-500/50 bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-900/20 dark:to-pink-900/20">
+              <CardContent className="p-4">
+                <div className="text-center mb-4">
+                  <div className="text-orange-600 font-bold text-lg mb-1">
+                    ⏰ LIMITED TIME: 50% OFF
+                  </div>
+                  <div className="text-2xl font-bold text-orange-700">
+                    {formatTime(timeLeft)}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Special launch pricing expires soon</p>
+                </div>
+                
+                <div className="space-y-3">
+                  <Button 
+                    onClick={handleUpgrade}
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 text-lg"
+                    size="lg"
+                  >
+                    <Crown className="w-5 h-5 mr-2" />
+                    Unlock Everything - $12.49/mo
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleGenerateMore}
+                    variant="outline" 
+                    className="w-full"
+                  >
+                    <Heart className="w-4 h-4 mr-2" />
+                    Create Another Companion
+                  </Button>
+                </div>
+                
+                <div className="mt-4 text-center">
+                  <p className="text-xs text-muted-foreground mb-2">✅ 30-day money-back guarantee</p>
+                  <p className="text-xs text-muted-foreground">Join {premiumUsers}+ premium members worldwide</p>
+                </div>
               </CardContent>
             </Card>
           </div>

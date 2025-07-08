@@ -88,13 +88,13 @@ export function QuizFlow() {
   const getStepTitle = () => {
     switch (currentStep) {
       case 'character':
-        return 'Choose Your Perfect Companion';
+        return 'Who Will Be Your Perfect Companion?';
       case 'body-type':
-        return 'Select Body Type';
+        return 'What Draws You In Most?';
       case 'email':
-        return 'Almost Done!';
+        return 'Your Dream Companion Awaits!';
       case 'completed':
-        return 'Creating Your Companion...';
+        return 'Creating Your Perfect Match...';
       default:
         return '';
     }
@@ -103,31 +103,62 @@ export function QuizFlow() {
   const getStepDescription = () => {
     switch (currentStep) {
       case 'character':
-        return 'Select the character type that appeals to you most';
+        return 'Choose the type that speaks to your desires';
       case 'body-type':
-        return 'Choose your preferred body type';
+        return 'Select what captivates you most';
       case 'email':
-        return 'Enter your email to see your personalized companion';
+        return 'Get instant access to your personalized AI companion';
       case 'completed':
-        return 'Your perfect AI companion is being created...';
+        return 'Analyzing your preferences and creating your ideal companion...';
       default:
         return '';
     }
   };
 
+  const getProgressText = () => {
+    switch (currentStep) {
+      case 'character':
+        return 'Building your profile...';
+      case 'body-type':
+        return 'Personalizing your experience...';
+      case 'email':
+        return 'Almost ready to meet her!';
+      default:
+        return '';
+    }
+  };
+
+  const getProgressPercentage = () => {
+    switch (currentStep) {
+      case 'character':
+        return '33%';
+      case 'body-type':
+        return '66%';
+      case 'email':
+        return '100%';
+      default:
+        return '100%';
+    }
+  };
+
   return (
     <div className="w-full max-w-md mx-auto">
-      {/* Progress bar - only show during quiz steps */}
+      {/* Enhanced Progress bar with excitement copy */}
       <If condition={currentStep !== 'completed'}>
-        <div className="w-full bg-gray-700 rounded-full h-2 mb-8">
-          <div 
-            className="bg-gradient-to-r from-purple-500 to-orange-500 h-2 rounded-full transition-all duration-300 ease-in-out"
-            style={{ 
-              width: currentStep === 'character' ? '33%' : 
-                     currentStep === 'body-type' ? '66%' : 
-                     currentStep === 'email' ? '100%' : '100%' 
-            }}
-          />
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-gray-300">{getProgressText()}</span>
+            <span className="text-sm text-purple-400 font-medium">{getProgressPercentage()}</span>
+          </div>
+          <div className="w-full bg-gray-700 rounded-full h-3">
+            <div 
+              className="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 h-3 rounded-full transition-all duration-500 ease-in-out relative overflow-hidden"
+              style={{ width: getProgressPercentage() }}
+            >
+              {/* Animated shimmer effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-pulse" />
+            </div>
+          </div>
         </div>
       </If>
 
@@ -165,9 +196,27 @@ export function QuizFlow() {
       
       <If condition={currentStep === 'completed'}>
         <div className="text-center py-8">
-          <Spinner className="h-16 w-16 mx-auto mb-4" />
-          <p className="text-white text-xl mb-2">Creating your perfect companion...</p>
-          <p className="text-gray-400">Redirecting to your personalized experience...</p>
+          <div className="relative mb-6">
+            <Spinner className="h-16 w-16 mx-auto text-purple-500" />
+            <div className="absolute inset-0 rounded-full border-2 border-purple-500/20 animate-ping" />
+          </div>
+          <h2 className="text-white text-2xl font-bold mb-3">
+            {getStepTitle()}
+          </h2>
+          <p className="text-purple-300 text-lg mb-2">
+            {getStepDescription()}
+          </p>
+          <div className="mt-4 space-y-1">
+            <p className="text-gray-400 text-sm animate-pulse">
+              ✨ Analyzing your preferences...
+            </p>
+            <p className="text-gray-400 text-sm animate-pulse" style={{animationDelay: '0.5s'}}>
+              💖 Crafting your perfect match...
+            </p>
+            <p className="text-gray-400 text-sm animate-pulse" style={{animationDelay: '1s'}}>
+              🎨 Adding final touches...
+            </p>
+          </div>
         </div>
       </If>
     </div>
