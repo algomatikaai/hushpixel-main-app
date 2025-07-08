@@ -16,6 +16,10 @@
     "start": "next start",
     "start:test": "NODE_ENV=test next start",
     "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "supabase": "supabase",
     "supabase:start": "supabase status || supabase start",
     "supabase:stop": "supabase stop",
@@ -83,6 +87,7 @@
     "@types/node": "^24.0.4",
     "@types/react": "19.1.8",
     "@types/react-dom": "19.1.6",
+    "@vitest/coverage-v8": "^2.1.8",
     "babel-plugin-react-compiler": "19.1.0-rc.2",
     "cssnano": "^7.0.7",
     "pino-pretty": "^13.0.0",
@@ -90,7 +95,8 @@
     "supabase": "^2.26.9",
     "tailwindcss": "4.1.10",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^2.1.8"
   },
   "prettier": "@kit/prettier-config",
   "browserslist": [

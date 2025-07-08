@@ -8,12 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Badge } from '@kit/ui/badge';
 import { ScrollArea } from '@kit/ui/scroll-area';
 import { Separator } from '@kit/ui/separator';
+import { Spinner } from '@kit/ui/spinner';
+import { Alert, AlertDescription } from '@kit/ui/alert';
+import { useUserWorkspace } from '@kit/accounts/hooks/use-user-workspace';
 import { Loader2, Sparkles, Crown, Download, Heart, History, RefreshCw, AlertCircle, X, ChevronLeft, ChevronRight, Timer, Zap, Users, Star, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Import our new components
-import { FeedbackCollection, QuickFeedbackPrompt } from '../home/(user)/_components/feedback-collection';
-import { OnboardingTooltips, TourTarget, ContextualHelp } from '../home/(user)/_components/onboarding-tooltips';
+import { FeedbackCollection, QuickFeedbackPrompt } from '../../_components/feedback-collection';
+import { OnboardingTooltips, TourTarget, ContextualHelp } from '../../_components/onboarding-tooltips';
 
 // Types for generation history
 interface GenerationItem {
@@ -29,6 +32,13 @@ interface GenerationError {
   message: string;
   code?: string;
   retryable: boolean;
+}
+
+interface AuthenticatedGenerateClientProps {
+  user: {
+    id: string;
+    email: string;
+  };
 }
 
 // Style presets for quick generation
@@ -55,7 +65,7 @@ const STYLE_PRESETS = [
   }
 ];
 
-export default function GenerateClient() {
+export function AuthenticatedGenerateClient({ user }: AuthenticatedGenerateClientProps) {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -74,79 +84,70 @@ export default function GenerateClient() {
   const [activeUsers, setActiveUsers] = useState(2340);
   const [todaysGenerations, setTodaysGenerations] = useState(45230);
   const router = useRouter();
+  
+  // Use MakerKit workspace context
+  const { user: workspaceUser, account } = useUserWorkspace();
 
-  // Mock user ID for demo - in production this would come from your auth system
-  const userId = 'demo-user-123';
-
-  // Load generation history from localStorage on mount
+  // Load generation history from database on mount
   useEffect(() => {
-    const savedHistory = localStorage.getItem('hushpixel-generation-history');
-    if (savedHistory) {
-      try {
-        const parsed = JSON.parse(savedHistory).map((item: any) => ({
-          ...item,
-          timestamp: new Date(item.timestamp)
-        }));
-        setGenerationHistory(parsed);
-      } catch (e) {
-        console.error('Failed to load generation history:', e);
-      }
-    }
-
-    // Check if this is the user's first time
-    const hasGenerated = localStorage.getItem('hushpixel-has-generated');
-    setIsFirstTime(!hasGenerated);
-
+    loadGenerationHistory();
+    checkIfFirstTime();
+    
     // Simulate live stats updates
-    const statsInterval = setInterval(() => {
-      setActiveUsers(prev => prev + Math.floor(Math.random() * 10 - 5));
-      setTodaysGenerations(prev => prev + Math.floor(Math.random() * 5));
-    }, 30000); // Update every 30 seconds
+    const interval = setInterval(() => {
+      setActiveUsers(prev => prev + Math.floor(Math.random() * 5 - 2));
+      setTodaysGenerations(prev => prev + Math.floor(Math.random() * 10));
+    }, 30000);
 
-    return () => clearInterval(statsInterval);
+    return () => clearInterval(interval);
   }, []);
 
-  // Save generation history to localStorage whenever it changes
-  useEffect(() => {
-    if (generationHistory.length > 0) {
-      localStorage.setItem('hushpixel-generation-history', JSON.stringify(generationHistory));
+  const loadGenerationHistory = async () => {
+    try {
+      const response = await fetch('/api/generations/history');
+      if (response.ok) {
+        const data = await response.json();
+        const historyWithDates = data.map((item: any) => ({
+          ...item,
+          timestamp: new Date(item.created_at)
+        }));
+        setGenerationHistory(historyWithDates);
+        setGenerationCount(data.length);
+      }
+    } catch (error) {
+      console.error('Failed to load generation history:', error);
+      // Fallback to localStorage for now
+      const savedHistory = localStorage.getItem('hushpixel-generation-history');
+      if (savedHistory) {
+        try {
+          const parsed = JSON.parse(savedHistory).map((item: any) => ({
+            ...item,
+            timestamp: new Date(item.timestamp)
+          }));
+          setGenerationHistory(parsed);
+          setGenerationCount(parsed.length);
+        } catch (e) {
+          console.error('Failed to parse local history:', e);
+        }
+      }
     }
-  }, [generationHistory]);
+  };
 
-  // Progress simulation for better UX
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isGenerating) {
-      setGenerationProgress(0);
-      interval = setInterval(() => {
-        setGenerationProgress(prev => {
-          if (prev >= 90) return prev;
-          return prev + Math.random() * 10;
-        });
-      }, 500);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isGenerating]);
+  const checkIfFirstTime = () => {
+    const hasGenerated = localStorage.getItem('hushpixel-has-generated');
+    setIsFirstTime(!hasGenerated && generationCount === 0);
+  };
 
-  const handleGenerate = async (customPrompt?: string, stylePreset?: string) => {
+  const handleGenerate = useCallback(async (customPrompt?: string, stylePreset?: string) => {
     const finalPrompt = customPrompt || prompt;
     
     if (!finalPrompt.trim()) {
-      toast.error('Please enter a description or select a style preset');
+      toast.error('Please enter a prompt');
       return;
     }
 
-    // Check if user hit the free limit
-    if (generationCount >= 1) {
-      setShowPaywall(true);
-      return;
-    }
-
-    setIsGenerating(true);
-    setGeneratedImage(null);
     setError(null);
+    setIsGenerating(true);
     setGenerationProgress(0);
 
     try {
@@ -195,60 +196,75 @@ export default function GenerateClient() {
       localStorage.setItem('hushpixel-has-generated', 'true');
       setIsFirstTime(false);
       
+      // Save to localStorage as backup
+      localStorage.setItem('hushpixel-generation-history', JSON.stringify([generationItem, ...generationHistory]));
+      
       // Show feedback collection after a delay
       setTimeout(() => {
         setShowFeedback(true);
-      }, 3000);
+      }, 5000);
       
-      toast.success('Image generated successfully!');
-
-    } catch (error) {
-      console.error('Generation error:', error);
-      const errorObj = error as GenerationError;
-      setError(errorObj);
+      toast.success(`${data.characterName} is ready! 🎉`);
       
-      if (errorObj.retryable && retryCount < 2) {
-        toast.error(`Generation failed. Retrying... (${retryCount + 1}/3)`);
-        setRetryCount(prev => prev + 1);
-        setTimeout(() => handleGenerate(finalPrompt, stylePreset), 2000);
+    } catch (err) {
+      console.error('Generation error:', err);
+      
+      if (err instanceof Error || (typeof err === 'object' && err !== null && 'message' in err)) {
+        setError(err as GenerationError);
+        
+        if ((err as GenerationError).retryable && retryCount < 3) {
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            handleGenerate(customPrompt, stylePreset);
+          }, 2000);
+          return;
+        }
       } else {
-        toast.error(errorObj.message || 'Generation failed');
+        setError({
+          message: 'An unexpected error occurred',
+          retryable: true
+        });
       }
+      
+      toast.error('Generation failed. Please try again.');
     } finally {
-      if (!error || !(error as GenerationError).retryable || retryCount >= 2) {
-        setIsGenerating(false);
-        setGenerationProgress(0);
-      }
+      setIsGenerating(false);
     }
-  };
+  }, [prompt, generationCount, generationHistory, retryCount]);
 
-  const handleRetry = useCallback(() => {
-    if (error && error.retryable) {
-      setRetryCount(0);
-      handleGenerate(prompt);
-    }
-  }, [error, prompt]);
+  const handleRetry = () => {
+    setError(null);
+    handleGenerate();
+  };
 
   const selectFromHistory = (item: GenerationItem) => {
     setGeneratedImage(item.imageUrl);
     setCharacterName(item.characterName);
-    setPrompt(item.prompt);
+    setCurrentHistoryIndex(generationHistory.indexOf(item));
     setShowHistory(false);
   };
 
   const navigateHistory = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && currentHistoryIndex > 0) {
-      setCurrentHistoryIndex(prev => prev - 1);
-    } else if (direction === 'next' && currentHistoryIndex < generationHistory.length - 1) {
-      setCurrentHistoryIndex(prev => prev + 1);
+    const newIndex = direction === 'prev' 
+      ? Math.max(0, currentHistoryIndex - 1)
+      : Math.min(generationHistory.length - 1, currentHistoryIndex + 1);
+    
+    const item = generationHistory[newIndex];
+    if (item) {
+      setGeneratedImage(item.imageUrl);
+      setCharacterName(item.characterName);
+      setCurrentHistoryIndex(newIndex);
     }
   };
 
   const handleUpgrade = () => {
-    startTransition(() => {
-      router.push('/home/billing');
+    startTransition(async () => {
+      router.push('/home/billing?source=generation_paywall');
     });
   };
+
+  // Check if user can generate more (based on subscription)
+  const canGenerate = true; // For now, let authenticated users generate unlimited
 
   if (showPaywall && generatedImage) {
     return <PaywallScreen 
@@ -263,7 +279,7 @@ export default function GenerateClient() {
     <div className="min-h-screen bg-background py-4 sm:py-8">
       {/* Onboarding Tooltips */}
       <OnboardingTooltips 
-        userId={userId} 
+        userId={account.id} 
         userStatus={isFirstTime ? 'new' : 'returning'} 
         currentPage="generate" 
       />
@@ -287,7 +303,7 @@ export default function GenerateClient() {
                 </Button>
               )}
               <FeedbackCollection 
-                userId={userId} 
+                userId={account.id} 
                 context="generation"
                 trigger={
                   <Button variant="outline" size="sm" className="mb-2 sm:mb-0">
@@ -298,58 +314,24 @@ export default function GenerateClient() {
               />
             </div>
           </div>
-          <p className="text-lg sm:text-xl text-gray-300 mb-4">
-            Describe your perfect companion and watch AI bring them to life
-          </p>
-          
-          {/* Social Proof and Status Indicators */}
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 mb-4">
-            <div className="inline-flex items-center gap-2 bg-purple-600/20 border border-purple-500/30 rounded-full px-3 sm:px-4 py-2 text-purple-200">
-              <Sparkles className="w-4 h-4" />
-              <span className="text-xs sm:text-sm">
-                {generationCount === 0 ? 'First generation is HD quality!' : `${1 - generationCount} free generations remaining`}
-              </span>
-            </div>
-            
-            <div className="inline-flex items-center gap-2 bg-green-600/20 border border-green-500/30 rounded-full px-3 sm:px-4 py-2 text-green-200">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-xs sm:text-sm">
-                {activeUsers.toLocaleString()} users online
-              </span>
-            </div>
-            
-            <div className="inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 rounded-full px-3 sm:px-4 py-2 text-blue-200">
-              <Zap className="w-4 h-4" />
-              <span className="text-xs sm:text-sm">
-                {todaysGenerations.toLocaleString()} generated today
-              </span>
-            </div>
-            
-            {error && (
-              <Badge variant="destructive" className="text-xs">
-                <AlertCircle className="w-3 h-3 mr-1" />
-                Generation Error
-              </Badge>
-            )}
-          </div>
 
-          {/* Trust indicators for first-time users */}
-          {isFirstTime && (
-            <div className="flex items-center justify-center gap-4 text-sm text-gray-400 mb-4">
-              <div className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                <span>127,000+ users</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 text-yellow-400" />
-                <span>4.9/5 rating</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Crown className="w-4 h-4 text-purple-400" />
-                <span>No credit card required</span>
-              </div>
+          {/* Stats */}
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              <span>{activeUsers.toLocaleString()} active now</span>
             </div>
-          )}
+            <Separator orientation="vertical" className="h-4" />
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4" />
+              <span>{todaysGenerations.toLocaleString()} generated today</span>
+            </div>
+            <Separator orientation="vertical" className="h-4" />
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4" />
+              <span>4.9/5 rating</span>
+            </div>
+          </div>
         </div>
 
         {/* Generation History Sidebar */}
@@ -405,19 +387,19 @@ export default function GenerateClient() {
           <div className="space-y-4 sm:space-y-6">
             {/* Error display */}
             {error && (
-              <Card className="bg-red-900/20 border-red-500/30">
+              <Card className="bg-destructive/10 border-destructive/30">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                    <AlertCircle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
-                      <h4 className="text-red-200 font-medium mb-1">Generation Failed</h4>
-                      <p className="text-red-300 text-sm mb-3">{error.message}</p>
+                      <h4 className="text-destructive font-medium mb-1">Generation Failed</h4>
+                      <p className="text-destructive/80 text-sm mb-3">{error.message}</p>
                       {error.retryable && (
                         <Button
                           onClick={handleRetry}
                           variant="outline"
                           size="sm"
-                          className="border-red-500/50 text-red-200 hover:bg-red-600/20"
+                          className="border-destructive/50 text-destructive hover:bg-destructive/20"
                         >
                           <RefreshCw className="w-4 h-4 mr-2" />
                           Try Again
@@ -428,7 +410,7 @@ export default function GenerateClient() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setError(null)}
-                      className="text-red-400 hover:text-red-200"
+                      className="text-destructive hover:text-destructive/80"
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -475,7 +457,7 @@ export default function GenerateClient() {
                   <TourTarget tourId="generate-button">
                     <Button 
                       onClick={() => handleGenerate()}
-                      disabled={isGenerating || !prompt.trim()}
+                      disabled={isGenerating || !prompt.trim() || !canGenerate}
                       size="lg"
                       className="w-full font-semibold text-sm sm:text-base"
                     >
@@ -514,7 +496,7 @@ export default function GenerateClient() {
                       <Button
                         key={index}
                         onClick={() => handleGenerate(style.prompt, style.name)}
-                        disabled={isGenerating}
+                        disabled={isGenerating || !canGenerate}
                         variant="outline"
                         className="w-full p-3 sm:p-4 h-auto justify-between group"
                       >
@@ -523,7 +505,7 @@ export default function GenerateClient() {
                           <div className="text-xs sm:text-sm text-muted-foreground">{style.description}</div>
                         </div>
                         <div className="text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ChevronRight className="w-4 h-4" />
+                          <ChevronLeft className="w-4 h-4" />
                         </div>
                       </Button>
                     ))}
@@ -590,7 +572,7 @@ export default function GenerateClient() {
                           disabled={currentHistoryIndex === generationHistory.length - 1}
                           className="bg-background/80 backdrop-blur-sm"
                         >
-                          <ChevronRight className="w-4 h-4" />
+                          <ChevronLeft className="w-4 h-4" />
                         </Button>
                       </div>
                     )}
@@ -599,18 +581,18 @@ export default function GenerateClient() {
                   <div className="p-4 space-y-3">
                     <Button 
                       onClick={() => setShowPaywall(true)}
-                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-sm sm:text-base py-2 sm:py-3"
+                      className="w-full"
                     >
                       <Crown className="w-4 h-4 mr-2" />
                       Start Chatting with {characterName}
                     </Button>
                     
                     <div className="flex gap-2">
-                      <Button variant="outline" className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700 text-xs sm:text-sm">
+                      <Button variant="outline" className="flex-1 text-xs sm:text-sm">
                         <Download className="w-4 h-4 mr-1 sm:mr-2" />
                         <span className="hidden sm:inline">Download</span>
                       </Button>
-                      <Button variant="outline" className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700 text-xs sm:text-sm">
+                      <Button variant="outline" className="flex-1 text-xs sm:text-sm">
                         <Heart className="w-4 h-4 mr-1 sm:mr-2" />
                         <span className="hidden sm:inline">Save</span>
                       </Button>
@@ -619,7 +601,7 @@ export default function GenerateClient() {
                     {/* Quick feedback after generation */}
                     {showFeedback && (
                       <QuickFeedbackPrompt 
-                        userId={userId} 
+                        userId={account.id} 
                         context="generation" 
                         className="mt-4"
                       />

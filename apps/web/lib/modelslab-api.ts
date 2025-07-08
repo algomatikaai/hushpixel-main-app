@@ -167,26 +167,42 @@ class ModelsLabAPI {
   }
 
   private selectModel(quality?: string): string {
-    // Use different models based on quality preference
+    // Use high-quality NSFW models for WOW factor
+    const envModel = process.env.MODELSLAB_DEFAULT_MODEL;
+    
     switch (quality) {
       case 'hd':
-        return 'realistic-vision-v5'; // High quality model
+        return envModel || 'realistic-vision-v5'; // Premium quality for first impressions
       default:
-        return 'realistic-vision-v4'; // Standard model, faster
+        return envModel || 'realistic-vision-v5'; // Always use best model for WOW factor
     }
   }
 
   private enhancePrompt(prompt: string): string {
-    // Add quality enhancers to the prompt
+    // Enhanced prompts for maximum WOW factor NSFW results
     const qualityTags = [
-      '(best quality:1.2)',
-      '(realistic:1.2)', 
+      '(masterpiece:1.2)',
+      '(best quality:1.4)',
+      '(ultra high res:1.2)',
+      'photorealistic',
       'detailed skin texture',
-      'professional photography',
-      'sharp focus'
+      'professional studio lighting',
+      'sharp focus',
+      '8k uhd',
+      'film grain',
+      'beautiful detailed eyes',
+      'beautiful detailed lips',
+      'extremely detailed face'
     ];
 
-    return `${prompt}, ${qualityTags.join(', ')}`;
+    const nsfwEnhancers = [
+      'seductive pose',
+      'alluring expression',
+      'confident demeanor',
+      'stunning beauty'
+    ];
+
+    return `${prompt}, ${qualityTags.join(', ')}, ${nsfwEnhancers.join(', ')}`;
   }
 
   // Health check method

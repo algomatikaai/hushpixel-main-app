@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
-import GenerateClient from './generate-client';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { QuizAutoGenerate } from './quiz-auto-generate';
 
 interface GeneratePageProps {
@@ -18,7 +18,7 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
   const params = await searchParams;
   const { character, body, email, session } = params;
   
-  // Handle quiz flow - auto-generate based on quiz selections
+  // Handle quiz flow - auto-generate based on quiz selections (anonymous users)
   if (character && body && email && session) {
     console.log('Quiz flow detected:', { character, body, email: email.substring(0, 3) + '***', session });
     return <Suspense fallback={<GenerationLoading />}>
@@ -31,98 +31,20 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
     </Suspense>;
   }
 
-  // Regular generation page for existing users  
-  return <GenerateClient />;
-}
-
-async function BridgeHandler({ token }: { token: string }) {
-  // Verify the bridge token
-  const tokenPayload = await verifyBridgeToken(token);
-  
-  if (!tokenPayload) {
-    console.error('Invalid bridge token received');
-    redirect('/auth/sign-in?error=invalid_token');
-  }
-
+  // Check if user is authenticated - if so, redirect to workspace
   const supabase = getSupabaseServerClient();
-
-  try {
-    // Find or create user in Supabase
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', tokenPayload.email)
-      .single();
-
-    if (userError && userError.code !== 'PGRST116') {
-      console.error('Error fetching user:', userError);
-      redirect('/auth/sign-in?error=user_fetch_failed');
-    }
-
-    let userId = user?.id;
-
-    // If user doesn't exist, create them
-    if (!user) {
-      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-        email: tokenPayload.email,
-        email_confirm: true,
-        user_metadata: {
-          quiz_completed: true,
-          character_data: tokenPayload.characterData
-        }
-      });
-
-      if (createError) {
-        console.error('Error creating user:', createError);
-        redirect('/auth/sign-in?error=user_creation_failed');
-      }
-
-      userId = newUser.user.id;
-    }
-
-    // Generate the character name and prompt
-    const characterName = generateCharacterName(tokenPayload.characterData);
-    const prompt = buildPromptFromQuizData(tokenPayload.characterData);
-
-    // Generate the first image
-    const generation = await generateCompanionImage({
-      prompt,
-      characterSeed: `${tokenPayload.characterData.type}_${tokenPayload.characterData.body}`,
-      isFirstGeneration: true,
-      quality: 'hd'
-    });
-
-    if (!generation.success) {
-      console.error('Generation failed:', generation.error);
-      // Still redirect to app, but show error there
-      redirect(`/home?error=generation_failed&message=${encodeURIComponent(generation.error || 'Unknown error')}`);
-    }
-
-    // Save generation to database
-    const { error: saveError } = await supabase
-      .from('generations')
-      .insert({
-        user_id: userId,
-        prompt,
-        image_url: generation.imageUrl,
-        character_name: characterName,
-        is_first_generation: true,
-        metadata: generation.metadata,
-        created_at: new Date().toISOString()
-      });
-
-    if (saveError) {
-      console.error('Error saving generation:', saveError);
-    }
-
-    // Redirect to main app with success
-    redirect(`/home?welcome=true&character=${encodeURIComponent(characterName)}&image=${encodeURIComponent(generation.imageUrl || '')}`);
-
-  } catch (error) {
-    console.error('Bridge handler error:', error);
-    redirect('/auth/sign-in?error=bridge_processing_failed');
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (user) {
+    redirect('/home/generate');
   }
+
+  // For anonymous users without quiz params, redirect to quiz
+  redirect('/quiz');
 }
+
+// This function is no longer used but kept for reference
+// The bridge flow now happens through quiz-auto-generate component
 
 function GenerationLoading() {
   return (

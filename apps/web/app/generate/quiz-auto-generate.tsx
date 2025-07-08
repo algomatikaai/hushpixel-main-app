@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Badge } from '@kit/ui/badge';
-import { Loader2, Sparkles, Crown, Heart, Download } from 'lucide-react';
+import { Spinner } from '@kit/ui/spinner';
+import { Alert, AlertDescription } from '@kit/ui/alert';
+import { Loader2, Sparkles, Crown, Heart, Download, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface QuizAutoGenerateProps {
@@ -22,19 +24,19 @@ interface GenerationResult {
   error?: string;
 }
 
-// Character type mappings for prompt building
+// Enhanced character prompts for maximum WOW factor NSFW results
 const CHARACTER_PROMPTS = {
-  'asian-beauty': 'beautiful Asian woman, elegant and graceful',
-  'blonde-goddess': 'beautiful blonde woman, goddess-like appearance',
-  'brunette-bombshell': 'beautiful brunette woman, stunning and confident',
-  'redhead-vixen': 'beautiful redhead woman, fiery and passionate'
+  'asian-beauty': 'stunning Asian woman, perfect features, elegant and seductive, beautiful almond eyes, silky black hair',
+  'blonde-goddess': 'gorgeous blonde goddess, radiant beauty, captivating blue eyes, flowing golden hair, divine appearance',
+  'brunette-bombshell': 'sultry brunette bombshell, mesmerizing brown eyes, luscious dark hair, confident and alluring',
+  'redhead-vixen': 'fiery redhead vixen, enchanting green eyes, cascading copper hair, passionate and irresistible'
 };
 
 const BODY_TYPE_PROMPTS = {
-  'slim': 'slim figure, elegant proportions',
-  'curvy': 'curvy figure, feminine silhouette',
-  'athletic': 'athletic build, toned physique',
-  'petite': 'petite frame, delicate features'
+  'slim': 'slender graceful figure, perfect proportions, toned and elegant',
+  'curvy': 'voluptuous curves, hourglass silhouette, sensual feminine form',
+  'athletic': 'fit athletic physique, toned muscles, strong and beautiful body',
+  'petite': 'delicate petite frame, adorable proportions, cute and alluring'
 };
 
 export function QuizAutoGenerate({ character, body, email, session }: QuizAutoGenerateProps) {
@@ -74,11 +76,31 @@ export function QuizAutoGenerate({ character, body, email, session }: QuizAutoGe
       try {
         setIsGenerating(true);
         
-        // Build prompt from quiz selections
+        // Build enhanced NSFW prompt for maximum WOW factor
         const characterPrompt = CHARACTER_PROMPTS[character as keyof typeof CHARACTER_PROMPTS] || 'beautiful woman';
         const bodyPrompt = BODY_TYPE_PROMPTS[body as keyof typeof BODY_TYPE_PROMPTS] || 'attractive figure';
         
-        const fullPrompt = `${characterPrompt}, ${bodyPrompt}, professional photography, high quality, detailed, beautiful lighting, portrait style`;
+        // Enhanced NSFW prompt for instant addiction
+        const nsfwElements = [
+          'nude',
+          'topless', 
+          'sexy lingerie',
+          'seductive pose',
+          'bedroom setting',
+          'intimate lighting',
+          'provocative angle'
+        ];
+        
+        const qualityEnhancers = [
+          'masterpiece quality',
+          'ultra realistic',
+          'detailed skin',
+          'perfect anatomy',
+          'cinematic lighting',
+          'professional photography'
+        ];
+        
+        const fullPrompt = `${characterPrompt}, ${bodyPrompt}, ${nsfwElements.join(', ')}, ${qualityEnhancers.join(', ')}`;
         
         console.log('🎨 Generating image with prompt:', fullPrompt);
         
@@ -157,68 +179,80 @@ export function QuizAutoGenerate({ character, body, email, session }: QuizAutoGe
 
 function GeneratingAnimation({ character, body }: { character: string; body: string }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-purple-900 flex items-center justify-center">
-      <div className="text-center max-w-md mx-auto px-6">
-        <div className="mb-8">
-          <div className="w-24 h-24 mx-auto mb-6 relative">
-            <div className="absolute inset-0 rounded-full border-4 border-purple-200 opacity-20"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-purple-500 border-t-transparent animate-spin"></div>
-            <div className="absolute inset-3 rounded-full border-2 border-purple-300 border-b-transparent animate-spin animation-delay-150"></div>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <Spinner className="w-12 h-12" />
           </div>
-          
-          <h1 className="text-3xl font-bold text-white mb-4">
-            Creating Your Perfect Companion...
-          </h1>
-          
-          <p className="text-purple-200 text-lg mb-6">
-            Based on your quiz: {character.replace('-', ' ')} with {body} figure
-          </p>
-
-          <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between text-sm text-gray-300 mb-2">
-              <span>Processing your preferences...</span>
-              <span className="text-purple-400">✓</span>
-            </div>
-            <div className="flex items-center justify-between text-sm text-gray-300 mb-2">
-              <span>Generating HD image...</span>
-              <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <span>Preparing your companion...</span>
-              <span>⏳</span>
-            </div>
+          <CardTitle className="text-2xl font-bold">
+            Creating Your Perfect Companion
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="text-center">
+            <p className="text-muted-foreground text-lg">
+              Based on your quiz: {character.replace('-', ' ')} with {body} figure
+            </p>
           </div>
 
-          <p className="text-sm text-gray-400">
+          <Card className="bg-secondary/50">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Processing your preferences...</span>
+                <span className="text-primary font-bold">✓</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Generating HD image...</span>
+                <Spinner className="w-4 h-4" />
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground opacity-60">Preparing your companion...</span>
+                <span className="opacity-60">⏳</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <p className="text-sm text-muted-foreground text-center">
             This usually takes 10-15 seconds
           </p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
 function ErrorDisplay({ error, character, body }: { error: string; character: string; body: string }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-purple-900 flex items-center justify-center">
-      <div className="text-center max-w-md mx-auto px-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <AlertCircle className="w-12 h-12 text-destructive" />
+          </div>
+          <CardTitle className="text-2xl font-bold">
             Oops! Something went wrong
-          </h1>
-          
-          <p className="text-red-200 text-lg mb-6">
-            {error}
-          </p>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              {error}
+            </AlertDescription>
+          </Alert>
 
-          <Button 
-            onClick={() => window.location.reload()} 
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            Try Again
-          </Button>
-        </div>
-      </div>
+          <div className="text-center">
+            <Button 
+              onClick={() => window.location.reload()}
+              variant="default"
+              className="w-full"
+            >
+              Try Again
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -235,65 +269,63 @@ function GenerationSuccess({ result, character, body, email }: {
   };
 
   const handleUpgrade = () => {
-    // Redirect to subscription/billing page
-    window.location.href = '/billing?source=quiz_completion';
+    // Redirect to subscription/billing page (MakerKit billing path)
+    window.location.href = '/home/billing?source=quiz_completion';
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-purple-900 p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <Badge className="mb-4 bg-green-600">
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="text-center">
+          <Badge variant="secondary" className="mb-4">
             <Sparkles className="w-4 h-4 mr-2" />
             Your Companion is Ready!
           </Badge>
           
-          <h1 className="text-4xl font-bold text-white mb-2">
+          <h1 className="text-4xl font-bold mb-2">
             Meet {result.characterName}
           </h1>
           
-          <p className="text-purple-200 text-lg">
+          <p className="text-muted-foreground text-lg">
             Created based on your perfect match: {character.replace('-', ' ')} with {body} figure
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 items-center">
+        <div className="grid md:grid-cols-2 gap-8 items-start">
           {/* Generated Image */}
-          <div className="relative">
-            <Card className="bg-gray-800/50 border-purple-500/30">
-              <CardContent className="p-4">
-                <img 
-                  src={result.imageUrl} 
-                  alt={result.characterName}
-                  className="w-full h-auto rounded-lg"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/images/placeholder-companion.jpg';
-                  }}
-                />
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <img 
+                src={result.imageUrl} 
+                alt={result.characterName}
+                className="w-full h-auto"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/images/placeholder-companion.jpg';
+                }}
+              />
+            </CardContent>
+          </Card>
 
           {/* Action Panel */}
           <div className="space-y-6">
-            <Card className="bg-gray-800/30 border-purple-500/30">
+            <Card>
               <CardHeader>
-                <CardTitle className="text-white flex items-center">
-                  <Crown className="w-5 h-5 mr-2 text-yellow-500" />
+                <CardTitle className="flex items-center">
+                  <Crown className="w-5 h-5 mr-2 text-primary" />
                   Your Perfect Match
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="text-gray-300">
-                  <p className="font-semibold text-purple-200">{result.characterName}</p>
-                  <p className="text-sm text-gray-400">Generated just for you</p>
+                <div>
+                  <p className="font-semibold text-lg">{result.characterName}</p>
+                  <p className="text-sm text-muted-foreground">Generated just for you</p>
                 </div>
                 
                 <div className="flex space-x-2">
                   <Button 
                     onClick={handleGenerateMore}
                     variant="outline" 
-                    className="flex-1 border-purple-500 text-purple-200 hover:bg-purple-800"
+                    className="flex-1"
                   >
                     <Heart className="w-4 h-4 mr-2" />
                     Generate More
@@ -301,7 +333,7 @@ function GenerationSuccess({ result, character, body, email }: {
                   
                   <Button 
                     onClick={handleUpgrade}
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                    className="flex-1"
                   >
                     <Crown className="w-4 h-4 mr-2" />
                     Unlock Premium
@@ -310,10 +342,12 @@ function GenerationSuccess({ result, character, body, email }: {
               </CardContent>
             </Card>
 
-            <div className="text-center text-gray-400 text-sm">
-              <p>Want unlimited generations and premium features?</p>
-              <p className="text-purple-300">Upgrade to premium for full access!</p>
-            </div>
+            <Card className="bg-secondary/50">
+              <CardContent className="p-4 text-center">
+                <p className="text-sm text-muted-foreground mb-1">Want unlimited generations and premium features?</p>
+                <p className="text-sm font-medium">Upgrade to premium for full access!</p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
