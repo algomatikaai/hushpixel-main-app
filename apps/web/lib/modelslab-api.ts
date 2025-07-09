@@ -88,16 +88,17 @@ class ModelsLabAPI {
     try {
       // Build the request payload for real API (using correct ModelsLab format)
       const payload = {
-        prompt: this.enhancePrompt(request.prompt),
+        key: this.apiKey,
         model_id: this.selectModel(request.quality),
+        prompt: this.enhancePrompt(request.prompt),
         negative_prompt: request.negativePrompt || DEFAULT_NEGATIVE_PROMPT,
         width: (request.quality === 'hd' ? 1024 : 512).toString(),
         height: (request.quality === 'hd' ? 1024 : 512).toString(),
+        samples: "1",
         num_inference_steps: (request.isFirstGeneration ? 35 : 25).toString(),
         guidance_scale: 7.5,
         scheduler: "DPMSolverMultistepScheduler",
-        enhance_prompt: null,
-        lora_model: null
+        safety_checker: "no"
       };
 
       console.log('ModelsLab API request:', { 
@@ -110,7 +111,6 @@ class ModelsLabAPI {
       const response = await fetch(`${this.baseUrl}/images/text2img`, {
         method: 'POST',
         headers: {
-          'key': this.apiKey,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
