@@ -98,30 +98,21 @@ class ModelsLabAPI {
     }
     
     try {
-      // Build the request payload for real API (using correct ModelsLab format)
+      // Build the request payload for ModelsLab Realtime API (simplified format)
       const payload = {
         key: this.apiKey,
-        model_id: this.selectModel(request.quality),
         prompt: this.enhancePrompt(request.prompt),
         negative_prompt: request.negativePrompt || DEFAULT_NEGATIVE_PROMPT,
-        width: (request.quality === 'hd' ? 1024 : 512).toString(),
-        height: (request.quality === 'hd' ? 1024 : 512).toString(),
-        samples: "1",
-        num_inference_steps: (request.isFirstGeneration ? 35 : 25).toString(),
-        guidance_scale: 7.5,
-        scheduler: "DPMSolverMultistepScheduler",
-        safety_checker: "no"
+        width: (request.quality === 'hd' ? "1024" : "512"),
+        height: (request.quality === 'hd' ? "1024" : "512"),
+        samples: "1"
       };
 
-      console.log('🚀 ModelsLab API request payload:', {
-        model_id: payload.model_id,
+      console.log('🚀 ModelsLab Realtime API request payload:', {
         prompt: payload.prompt.substring(0, 100) + '...',
         dimensions: `${payload.width}x${payload.height}`,
-        num_inference_steps: payload.num_inference_steps,
-        guidance_scale: payload.guidance_scale,
-        scheduler: payload.scheduler,
-        safety_checker: payload.safety_checker,
-        samples: payload.samples
+        samples: payload.samples,
+        has_negative_prompt: !!payload.negative_prompt
       });
       
       console.log('🔑 API key check:', {
@@ -130,9 +121,9 @@ class ModelsLabAPI {
         keyPrefix: payload.key?.substring(0, 8) || 'none'
       });
 
-      console.log('🌐 Making request to:', `${this.baseUrl}/images/text2img`);
+      console.log('🌐 Making request to:', `${this.baseUrl}/realtime/text2img`);
       
-      const response = await fetch(`${this.baseUrl}/images/text2img`, {
+      const response = await fetch(`${this.baseUrl}/realtime/text2img`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -225,9 +216,9 @@ class ModelsLabAPI {
         imageUrl,
         processingTime,
         metadata: {
-          model: payload.model_id,
-          seed: payload.seed?.toString() || 'random',
-          steps: parseInt(payload.num_inference_steps),
+          model: 'realtime-stable-diffusion',
+          seed: 'random',
+          dimensions: `${payload.width}x${payload.height}`,
           generationTime: data.generationTime
         }
       };
@@ -249,17 +240,6 @@ class ModelsLabAPI {
     }
   }
 
-  private selectModel(quality?: string): string {
-    // Use high-quality NSFW models for WOW factor
-    const envModel = process.env.MODELSLAB_DEFAULT_MODEL;
-    
-    switch (quality) {
-      case 'hd':
-        return envModel || 'aiprealistic-sdxl-nsfw-v1-0'; // Premium quality for first impressions
-      default:
-        return envModel || 'aiprealistic-sdxl-nsfw-v1-0'; // Always use best model for WOW factor
-    }
-  }
 
   private enhancePrompt(prompt: string): string {
     // Enhanced prompts for maximum WOW factor NSFW results
