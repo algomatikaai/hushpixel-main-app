@@ -52,8 +52,6 @@ export function QuizFlow() {
         const result = await submitQuizAction(completeQuizData);
         
         if (result.success) {
-          setCurrentStep('completed');
-          
           // Track quiz completion with full data for Facebook Pixel
           trackFBQuizComplete({
             character_type: result.data.characterType,
@@ -71,10 +69,8 @@ export function QuizFlow() {
             timestamp: Date.now()
           }));
           
-          // Redirect to generation page with session data
-          setTimeout(() => {
-            window.location.href = result.data.redirectUrl;
-          }, 2000);
+          // Redirect immediately to generation page (no intermediate loading)
+          window.location.href = result.data.redirectUrl;
         } else {
           toast.error('Failed to save quiz data. Please try again.');
         }
@@ -194,31 +190,6 @@ export function QuizFlow() {
         />
       </If>
       
-      <If condition={currentStep === 'completed'}>
-        <div className="text-center py-8">
-          <div className="relative mb-6">
-            <Spinner className="h-16 w-16 mx-auto text-primary" />
-            <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" />
-          </div>
-          <h2 className="text-foreground text-2xl font-bold mb-3">
-            {getStepTitle()}
-          </h2>
-          <p className="text-primary text-lg mb-2">
-            {getStepDescription()}
-          </p>
-          <div className="mt-4 space-y-1">
-            <p className="text-muted-foreground text-sm animate-pulse">
-              ✨ Analyzing your preferences...
-            </p>
-            <p className="text-muted-foreground text-sm animate-pulse" style={{animationDelay: '0.5s'}}>
-              💖 Crafting your perfect match...
-            </p>
-            <p className="text-muted-foreground text-sm animate-pulse" style={{animationDelay: '1s'}}>
-              🎨 Adding final touches...
-            </p>
-          </div>
-        </div>
-      </If>
     </div>
   );
 }

@@ -40,13 +40,16 @@ export const POST = enhanceRouteHandler(
 
     // Map plan IDs to actual Stripe price IDs
     const planIdMap = {
-      'premium-monthly': process.env.HUSHPIXEL_PREMIUM_PRICE_ID || 'price_test_mock_monthly',
+      'premium-monthly': process.env.HUSHPIXEL_PREMIUM_MONTHLY_PRICE_ID || 'price_test_mock_monthly',
       'premium-annual': process.env.HUSHPIXEL_PREMIUM_ANNUAL_PRICE_ID || 'price_test_mock_annual'
     };
 
     const stripePriceId = planIdMap[body.planId as keyof typeof planIdMap];
     
+    logger.info({ ...ctx, planId: body.planId, stripePriceId }, 'Stripe price ID mapping');
+    
     if (!stripePriceId) {
+      logger.error({ ...ctx, availablePlans: Object.keys(planIdMap) }, 'Invalid plan ID provided');
       return NextResponse.json({ error: 'Invalid plan ID' }, { status: 400 });
     }
 
@@ -77,10 +80,19 @@ export const POST = enhanceRouteHandler(
       });
 
     } catch (error) {
-      logger.error({ ...ctx, error }, 'Failed to create checkout session');
+      logger.error({ 
+        ...ctx, 
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        stripePriceId,
+        planId: body.planId
+      }, 'Failed to create checkout session');
       
       return NextResponse.json(
-        { error: 'Failed to create checkout session' },
+        { 
+          error: 'Failed to create checkout session',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        },
         { status: 500 }
       );
     }
