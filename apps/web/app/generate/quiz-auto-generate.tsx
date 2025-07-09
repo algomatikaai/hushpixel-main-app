@@ -294,7 +294,7 @@ function GenerationSuccess({ result, character, body, email }: {
   };
 
   const handleUpgrade = () => {
-    // Store user's companion data for post-signup
+    // Store user's companion data for post-authentication
     const companionData = {
       characterName: result.characterName,
       character,
@@ -305,26 +305,42 @@ function GenerationSuccess({ result, character, body, email }: {
     };
     localStorage.setItem('hushpixel_companion', JSON.stringify(companionData));
     
-    // Direct to seamless signup with billing intent
-    const signupUrl = new URL('/auth/sign-up', window.location.origin);
-    signupUrl.searchParams.set('next', '/home/billing');
-    signupUrl.searchParams.set('intent', 'premium');
-    signupUrl.searchParams.set('source', 'companion_generated');
+    // Get session data from localStorage
+    const sessionData = localStorage.getItem('hushpixel_session');
+    let sessionId = null;
+    if (sessionData) {
+      try {
+        const parsed = JSON.parse(sessionData);
+        sessionId = parsed.sessionId;
+      } catch (e) {
+        console.log('Could not parse session data');
+      }
+    }
     
-    window.location.href = signupUrl.toString();
+    // Direct to seamless checkout with email and session data
+    const checkoutUrl = new URL('/checkout', window.location.origin);
+    checkoutUrl.searchParams.set('plan', 'premium-monthly');
+    checkoutUrl.searchParams.set('source', 'quiz');
+    checkoutUrl.searchParams.set('intent', 'premium');
+    checkoutUrl.searchParams.set('email', email);
+    if (sessionId) {
+      checkoutUrl.searchParams.set('sessionId', sessionId);
+    }
+    
+    window.location.href = checkoutUrl.toString();
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-900 p-4">
+    <div className="min-h-screen bg-background p-4">
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Hero Section */}
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full font-semibold text-sm mb-4">
+          <div className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-full font-semibold text-sm mb-4">
             <Sparkles className="w-4 h-4" />
             Your Dream Companion is Ready!
           </div>
           
-          <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-5xl font-bold mb-2 text-foreground">
             Meet {result.characterName}
           </h1>
           
@@ -382,19 +398,19 @@ function GenerationSuccess({ result, character, body, email }: {
                 {/* Locked Feature 1: Poses */}
                 <div className="relative">
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="aspect-square bg-gray-200 rounded-lg relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-400/60 to-pink-400/60 backdrop-blur-sm flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">🔒</span>
+                    <div className="aspect-square bg-muted rounded-lg relative overflow-hidden">
+                      <div className="absolute inset-0 bg-primary/20 backdrop-blur-sm flex items-center justify-center">
+                        <span className="text-primary-foreground text-xs font-bold">🔒</span>
                       </div>
                     </div>
-                    <div className="aspect-square bg-gray-200 rounded-lg relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-400/60 to-pink-400/60 backdrop-blur-sm flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">🔒</span>
+                    <div className="aspect-square bg-muted rounded-lg relative overflow-hidden">
+                      <div className="absolute inset-0 bg-primary/20 backdrop-blur-sm flex items-center justify-center">
+                        <span className="text-primary-foreground text-xs font-bold">🔒</span>
                       </div>
                     </div>
-                    <div className="aspect-square bg-gray-200 rounded-lg relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-400/60 to-pink-400/60 backdrop-blur-sm flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">🔒</span>
+                    <div className="aspect-square bg-muted rounded-lg relative overflow-hidden">
+                      <div className="absolute inset-0 bg-primary/20 backdrop-blur-sm flex items-center justify-center">
+                        <span className="text-primary-foreground text-xs font-bold">🔒</span>
                       </div>
                     </div>
                   </div>
@@ -406,9 +422,9 @@ function GenerationSuccess({ result, character, body, email }: {
                 <div className="relative">
                   <div className="grid grid-cols-4 gap-1">
                     {[...Array(4)].map((_, i) => (
-                      <div key={i} className="aspect-square bg-gray-200 rounded-md relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-400/60 to-pink-400/60 backdrop-blur-sm flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">🔒</span>
+                      <div key={i} className="aspect-square bg-muted rounded-md relative overflow-hidden">
+                        <div className="absolute inset-0 bg-primary/20 backdrop-blur-sm flex items-center justify-center">
+                          <span className="text-primary-foreground text-xs font-bold">🔒</span>
                         </div>
                       </div>
                     ))}
@@ -421,9 +437,9 @@ function GenerationSuccess({ result, character, body, email }: {
                 <div className="relative">
                   <div className="grid grid-cols-3 gap-2">
                     {[...Array(3)].map((_, i) => (
-                      <div key={i} className="aspect-video bg-gray-200 rounded-md relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-400/60 to-pink-400/60 backdrop-blur-sm flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">🔒</span>
+                      <div key={i} className="aspect-video bg-muted rounded-md relative overflow-hidden">
+                        <div className="absolute inset-0 bg-primary/20 backdrop-blur-sm flex items-center justify-center">
+                          <span className="text-primary-foreground text-xs font-bold">🔒</span>
                         </div>
                       </div>
                     ))}
@@ -435,13 +451,13 @@ function GenerationSuccess({ result, character, body, email }: {
             </Card>
 
             {/* Scarcity & Upgrade CTA */}
-            <Card className="border-2 border-orange-500/50 bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-900/20 dark:to-pink-900/20">
+            <Card className="border-2 border-destructive/50 bg-destructive/5">
               <CardContent className="p-4">
                 <div className="text-center mb-4">
-                  <div className="text-orange-600 font-bold text-lg mb-1">
+                  <div className="text-destructive font-bold text-lg mb-1">
                     ⏰ LIMITED TIME: 50% OFF
                   </div>
-                  <div className="text-2xl font-bold text-orange-700">
+                  <div className="text-2xl font-bold text-destructive">
                     {formatTime(timeLeft)}
                   </div>
                   <p className="text-sm text-muted-foreground">Special launch pricing expires soon</p>
@@ -450,7 +466,7 @@ function GenerationSuccess({ result, character, body, email }: {
                 <div className="space-y-3">
                   <Button 
                     onClick={handleUpgrade}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 text-lg"
+                    className="w-full font-bold py-3 text-lg"
                     size="lg"
                   >
                     <Crown className="w-5 h-5 mr-2" />

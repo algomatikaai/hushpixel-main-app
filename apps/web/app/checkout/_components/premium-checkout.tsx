@@ -104,12 +104,12 @@ export function PremiumCheckout({ userId, email, source }: PremiumCheckoutProps)
     <div className="max-w-2xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center">
-        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full font-semibold text-sm mb-4">
+        <div className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-full font-semibold text-sm mb-4">
           <Crown className="w-4 h-4" />
           Unlock Premium Features
         </div>
         
-        <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold mb-4 text-foreground">
           Create Unlimited Companions
         </h1>
         
@@ -119,13 +119,13 @@ export function PremiumCheckout({ userId, email, source }: PremiumCheckoutProps)
       </div>
 
       {/* Urgency Banner */}
-      <Card className="border-2 border-orange-500/50 bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-900/20 dark:to-pink-900/20">
+      <Card className="border-2 border-destructive/50 bg-destructive/5">
         <CardContent className="p-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Clock className="w-5 h-5 text-orange-600" />
-            <span className="font-bold text-orange-600">LIMITED TIME: 50% OFF</span>
+            <Clock className="w-5 h-5 text-destructive" />
+            <span className="font-bold text-destructive">LIMITED TIME: 50% OFF</span>
           </div>
-          <div className="text-2xl font-bold text-orange-700 mb-1">
+          <div className="text-2xl font-bold text-destructive mb-1">
             {formatTime(timeLeft)}
           </div>
           <p className="text-sm text-muted-foreground">Special launch pricing expires soon</p>
@@ -153,7 +153,7 @@ export function PremiumCheckout({ userId, email, source }: PremiumCheckoutProps)
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-semibold">{plan.name}</h3>
                       {plan.popular && (
-                        <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                        <Badge>
                           Most Popular
                         </Badge>
                       )}
@@ -211,13 +211,13 @@ export function PremiumCheckout({ userId, email, source }: PremiumCheckoutProps)
       </Card>
 
       {/* Checkout Button */}
-      <Card className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+      <Card className="bg-primary text-primary-foreground">
         <CardContent className="p-6 text-center">
           <Button 
             onClick={handleCheckout}
             disabled={isLoading}
             size="lg"
-            className="w-full bg-white text-purple-600 hover:bg-gray-100 font-bold text-lg py-6"
+            className="w-full bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold text-lg py-6"
           >
             {isLoading ? (
               'Creating checkout...'

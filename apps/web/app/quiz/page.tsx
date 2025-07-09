@@ -11,7 +11,7 @@ export default function QuizPage() {
   return (
     <>
       <FacebookPixel />
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <Suspense fallback={
             <div className="flex items-center justify-center min-h-screen">

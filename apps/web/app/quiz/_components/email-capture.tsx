@@ -38,17 +38,17 @@ export function EmailCapture({ onSubmit, isLoading }: EmailCaptureProps) {
 
   return (
     <div className="max-w-md mx-auto space-y-6">
-      <Card className="border-purple-500/20 bg-purple-900/10">
-        <CardContent className="p-6">
-          <div className="text-center mb-6">
-            <h3 className="text-white text-xl font-semibold mb-2">
-              Get Your Perfect Companion
-            </h3>
-            <p className="text-gray-300 text-sm">
-              Enter your email to see your personalized AI companion generated just for you
-            </p>
-          </div>
+      <div className="text-center mb-8">
+        <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+          Your Dream Companion Awaits!
+        </h3>
+        <p className="text-muted-foreground text-base">
+          Get instant access to your personalized AI companion
+        </p>
+      </div>
 
+      <Card>
+        <CardContent className="p-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <FormField
@@ -61,18 +61,18 @@ export function EmailCapture({ onSubmit, isLoading }: EmailCaptureProps) {
                         {...field}
                         type="email"
                         placeholder="Enter your email address"
-                        className="bg-black/40 border-gray-600 text-white placeholder:text-gray-400 focus:border-purple-500"
+                        className="h-12"
                         disabled={isLoading || isSubmitted}
                       />
                     </FormControl>
-                    <FormMessage className="text-red-400" />
+                    <FormMessage />
                   </FormItem>
                 )}
               />
               
               <Button
                 type="submit"
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3"
+                className="w-full h-12 font-semibold text-lg"
                 disabled={isLoading || isSubmitted}
                 size="lg"
               >
@@ -91,7 +91,7 @@ export function EmailCapture({ onSubmit, isLoading }: EmailCaptureProps) {
           </Form>
 
           <div className="mt-4 text-center">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               We respect your privacy. Your email is only used to deliver your personalized companion.
             </p>
           </div>
@@ -99,20 +99,24 @@ export function EmailCapture({ onSubmit, isLoading }: EmailCaptureProps) {
       </Card>
 
       {/* Benefits section */}
-      <div className="space-y-3 text-center">
-        <div className="flex items-center justify-center space-x-2 text-sm text-gray-300">
-          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-          <span>Personalized AI companion based on your preferences</span>
-        </div>
-        <div className="flex items-center justify-center space-x-2 text-sm text-gray-300">
-          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-          <span>High-quality, realistic generation</span>
-        </div>
-        <div className="flex items-center justify-center space-x-2 text-sm text-gray-300">
-          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-          <span>Interactive chat capabilities</span>
-        </div>
-      </div>
+      <Card className="bg-muted/50">
+        <CardContent className="p-4">
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3 text-sm">
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
+              <span>Personalized AI companion based on your preferences</span>
+            </div>
+            <div className="flex items-center space-x-3 text-sm">
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
+              <span>High-quality, realistic generation</span>
+            </div>
+            <div className="flex items-center space-x-3 text-sm">
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
+              <span>Instant results with premium quality</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -147,16 +147,16 @@ export function QuizFlow() {
       <If condition={currentStep !== 'completed'}>
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-gray-300">{getProgressText()}</span>
-            <span className="text-sm text-purple-400 font-medium">{getProgressPercentage()}</span>
+            <span className="text-sm text-muted-foreground">{getProgressText()}</span>
+            <span className="text-sm text-primary font-medium">{getProgressPercentage()}</span>
           </div>
-          <div className="w-full bg-gray-700 rounded-full h-3">
+          <div className="w-full bg-muted rounded-full h-3">
             <div 
-              className="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 h-3 rounded-full transition-all duration-500 ease-in-out relative overflow-hidden"
+              className="bg-gradient-to-r from-primary via-primary to-primary h-3 rounded-full transition-all duration-500 ease-in-out relative overflow-hidden"
               style={{ width: getProgressPercentage() }}
             >
               {/* Animated shimmer effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-pulse" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary-foreground/30 to-transparent -skew-x-12 animate-pulse" />
             </div>
           </div>
         </div>
@@ -165,10 +165,10 @@ export function QuizFlow() {
       {/* Step content */}
       <If condition={currentStep === 'character'}>
         <div className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
             {getStepTitle()}
           </h2>
-          <p className="text-gray-200 text-base">
+          <p className="text-muted-foreground text-base">
             {getStepDescription()}
           </p>
         </div>
@@ -177,10 +177,10 @@ export function QuizFlow() {
       
       <If condition={currentStep === 'body-type'}>
         <div className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
             {getStepTitle()}
           </h2>
-          <p className="text-gray-200 text-base">
+          <p className="text-muted-foreground text-base">
             {getStepDescription()}
           </p>
         </div>
@@ -197,23 +197,23 @@ export function QuizFlow() {
       <If condition={currentStep === 'completed'}>
         <div className="text-center py-8">
           <div className="relative mb-6">
-            <Spinner className="h-16 w-16 mx-auto text-purple-500" />
-            <div className="absolute inset-0 rounded-full border-2 border-purple-500/20 animate-ping" />
+            <Spinner className="h-16 w-16 mx-auto text-primary" />
+            <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" />
           </div>
-          <h2 className="text-white text-2xl font-bold mb-3">
+          <h2 className="text-foreground text-2xl font-bold mb-3">
             {getStepTitle()}
           </h2>
-          <p className="text-purple-300 text-lg mb-2">
+          <p className="text-primary text-lg mb-2">
             {getStepDescription()}
           </p>
           <div className="mt-4 space-y-1">
-            <p className="text-gray-400 text-sm animate-pulse">
+            <p className="text-muted-foreground text-sm animate-pulse">
               ✨ Analyzing your preferences...
             </p>
-            <p className="text-gray-400 text-sm animate-pulse" style={{animationDelay: '0.5s'}}>
+            <p className="text-muted-foreground text-sm animate-pulse" style={{animationDelay: '0.5s'}}>
               💖 Crafting your perfect match...
             </p>
-            <p className="text-gray-400 text-sm animate-pulse" style={{animationDelay: '1s'}}>
+            <p className="text-muted-foreground text-sm animate-pulse" style={{animationDelay: '1s'}}>
               🎨 Adding final touches...
             </p>
           </div>
