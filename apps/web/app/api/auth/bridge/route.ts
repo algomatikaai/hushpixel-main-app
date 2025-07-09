@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getLogger } from '@kit/shared/logger';
 import { z } from 'zod';
 
@@ -21,29 +22,26 @@ export async function POST(request: NextRequest) {
     logger.info(ctx, `Bridge auth request for email: ${email.substring(0, 3)}***`);
 
     const supabase = getSupabaseServerClient();
+    const adminClient = getSupabaseServerAdminClient();
 
-    // Check if user already exists
-    const { data: existingUser, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single();
+    // Check if user already exists using admin client
+    const { data: existingUser, error: userError } = await adminClient.auth.admin.getUserByEmail(email);
 
-    if (userError && userError.code !== 'PGRST116') {
+    if (userError && userError.code !== 'user_not_found') {
       logger.error({ ...ctx, error: userError }, 'Error checking existing user');
       return NextResponse.json({ error: 'Database error' }, { status: 500 });
     }
 
-    let userId = existingUser?.id;
+    let userId = existingUser?.user?.id;
 
     // If user doesn't exist, create them with a temporary password
-    if (!existingUser) {
+    if (!existingUser?.user) {
       logger.info(ctx, 'Creating new user via bridge auth');
       
       // Generate a secure temporary password
       const tempPassword = `temp_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
       
-      const { data: newUser, error: signUpError } = await supabase.auth.admin.createUser({
+      const { data: newUser, error: signUpError } = await adminClient.auth.admin.createUser({
         email,
         password: tempPassword,
         email_confirm: true, // Auto-confirm email for bridge users
@@ -77,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate a temporary auth token that can be used for checkout
-    const { data: session, error: sessionError } = await supabase.auth.admin.generateLink({
+    const { data: session, error: sessionError } = await adminClient.auth.admin.generateLink({
       type: 'magiclink',
       email,
       options: {
@@ -115,9 +113,9 @@ export async function POST(request: NextRequest) {
     logger.error({ ...ctx, error }, 'Bridge auth failed');
     
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 });
     }
 
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }
