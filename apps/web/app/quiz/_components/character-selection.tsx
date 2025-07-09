@@ -15,33 +15,34 @@ interface CharacterOption {
 }
 
 // TOP 4 data-driven character selection based on CSV analysis
+// Ordered as requested: brunette & redhead (top row), asian & blonde (bottom row)
 const characterOptions: CharacterOption[] = [
-  {
-    id: 'asian-beauty',
-    name: 'Asian Beauty',
-    description: 'Elegant and graceful',
-    imageUrl: 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=400&h=600&fit=crop&crop=face',
-    percentage: '26.8%' // Top performer
-  },
   {
     id: 'brunette-beauty',
     name: 'Brunette Beauty', 
     description: 'Sophisticated and alluring',
-    imageUrl: 'https://images.unsplash.com/photo-1494790108755-2616c04e223d?w=400&h=600&fit=crop&crop=face',
+    imageUrl: '/images/character/brunette.webp',
     percentage: '24.3%'
   },
   {
     id: 'redhead-model',
     name: 'Redhead Model',
     description: 'Fiery and captivating',
-    imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=600&fit=crop&crop=face',
+    imageUrl: '/images/character/Redhead Model.webp',
     percentage: '23.1%'
+  },
+  {
+    id: 'asian-beauty',
+    name: 'Asian Beauty',
+    description: 'Elegant and graceful',
+    imageUrl: '/images/character/asian.webp',
+    percentage: '26.8%' // Top performer
   },
   {
     id: 'blonde-companion',
     name: 'Blonde Companion',
     description: 'Classic and charming',
-    imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=600&fit=crop&crop=face',
+    imageUrl: '/images/character/blonde.webp',
     percentage: '22.4%'
   }
 ];
@@ -102,7 +103,7 @@ export function CharacterSelection({ onSelect }: CharacterSelectionProps) {
                   sizes="(max-width: 768px) 50vw, 25vw"
                 />
                 {/* Popular badge for top performer */}
-                {character.id === 'asian-beauty' && (
+                {character.id === 'brunette-beauty' && (
                   <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-semibold">
                     Most Popular
                   </div>
@@ -126,9 +127,6 @@ export function CharacterSelection({ onSelect }: CharacterSelectionProps) {
                 </p>
                 <p className="text-muted-foreground text-xs text-center mt-1">
                   {character.description}
-                </p>
-                <p className="text-primary text-xs font-medium text-center mt-1">
-                  {character.percentage} prefer this
                 </p>
               </div>
             </CardContent>

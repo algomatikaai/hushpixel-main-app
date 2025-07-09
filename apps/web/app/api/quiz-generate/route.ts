@@ -20,9 +20,9 @@ export async function POST(request: NextRequest) {
     // Generate character name based on character type
     const characterNames = {
       'asian-beauty': ['Sakura', 'Yuki', 'Mei', 'Luna'],
-      'blonde-goddess': ['Aurora', 'Stella', 'Diana', 'Celeste'],
-      'brunette-bombshell': ['Sophia', 'Isabella', 'Valentina', 'Aria'],
-      'redhead-vixen': ['Scarlett', 'Ruby', 'Phoenix', 'Amber']
+      'blonde-companion': ['Aurora', 'Stella', 'Diana', 'Celeste'],
+      'brunette-beauty': ['Sophia', 'Isabella', 'Valentina', 'Aria'],
+      'redhead-model': ['Scarlett', 'Ruby', 'Phoenix', 'Amber']
     };
     
     const nameList = characterNames[character as keyof typeof characterNames] || ['Beauty'];

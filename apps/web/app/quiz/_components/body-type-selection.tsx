@@ -20,21 +20,21 @@ const bodyTypeOptions: BodyTypeOption[] = [
     id: 'slim',
     name: 'Slim',
     description: 'Petite and graceful',
-    imageUrl: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=300&h=400&fit=crop&crop=entropy',
+    imageUrl: '/images/body/slim.webp',
     percentage: '28.6%' // Top performer
   },
   {
-    id: 'athletic',
-    name: 'Athletic',
-    description: 'Fit and toned',
-    imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=400&fit=crop&crop=entropy',
+    id: 'fit',
+    name: 'Fit',
+    description: 'Athletic and toned',
+    imageUrl: '/images/body/fit.webp',
     percentage: '26.8%'
   },
   {
     id: 'curvy',
     name: 'Curvy',
     description: 'Feminine curves',
-    imageUrl: 'https://images.unsplash.com/photo-1594736797933-d0401ba50fd1?w=300&h=400&fit=crop&crop=entropy',
+    imageUrl: '/images/body/curvy.webp',
     percentage: '25.2%'
   }
 ];
@@ -108,9 +108,6 @@ export function BodyTypeSelection({ onSelect }: BodyTypeSelectionProps) {
                     )}
                   </div>
                   <p className="text-muted-foreground text-sm">{bodyType.description}</p>
-                  <p className="text-primary text-xs font-medium mt-1">
-                    {bodyType.percentage} prefer this
-                  </p>
                 </div>
                 
                 {/* Selection indicator */}
