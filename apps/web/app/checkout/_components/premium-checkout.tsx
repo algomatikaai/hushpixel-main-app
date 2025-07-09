@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Badge } from '@kit/ui/badge';
 import { Check, Crown, Sparkles, Shield, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { StripeCheckout } from '@kit/billing/stripe';
 
 interface PremiumCheckoutProps {
   userId?: string;
@@ -17,6 +18,7 @@ export function PremiumCheckout({ userId, email, source }: PremiumCheckoutProps)
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(23 * 60 + 47); // 23:47
+  const [checkoutToken, setCheckoutToken] = useState<string | null>(null);
 
   // Countdown timer for urgency
   useEffect(() => {
@@ -54,9 +56,9 @@ export function PremiumCheckout({ userId, email, source }: PremiumCheckoutProps)
 
       const data = await response.json();
       
-      if (data.checkoutUrl) {
-        // Redirect to Stripe checkout
-        window.location.href = data.checkoutUrl;
+      if (data.checkoutToken) {
+        // Show embedded checkout
+        setCheckoutToken(data.checkoutToken);
       } else {
         throw new Error(data.error || 'Failed to create checkout session');
       }
@@ -246,6 +248,14 @@ export function PremiumCheckout({ userId, email, source }: PremiumCheckoutProps)
         <p>Join 12,000+ users creating unlimited AI companions</p>
         <p className="mt-1">⭐⭐⭐⭐⭐ Rated 4.9/5 by our community</p>
       </div>
+      
+      {/* Embedded Checkout */}
+      {checkoutToken && (
+        <StripeCheckout
+          checkoutToken={checkoutToken}
+          onClose={() => setCheckoutToken(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getLogger } from '@kit/shared/logger';
 
 const LeadCaptureSchema = z.object({
   email: z.string().email('Valid email is required'),
@@ -11,30 +13,83 @@ const LeadCaptureSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const logger = await getLogger();
     const body = await request.json();
+    const ctx = { name: 'capture-lead' };
+    
+    logger.info(ctx, 'Lead capture request received');
+    
     const { email, character, body: bodyType, session, source } = LeadCaptureSchema.parse(body);
-
-    // Log the lead capture (can be enhanced to save to database later)
-    console.log('📧 Lead captured:', {
+    
+    const supabase = getSupabaseServerClient();
+    
+    // Check if lead already exists for this session
+    const { data: existingLead } = await supabase
+      .from('quiz_responses')
+      .select('id')
+      .eq('session_id', session)
+      .maybeSingle();
+    
+    let leadId = existingLead?.id;
+    
+    if (!existingLead) {
+      // Store lead in quiz_responses table
+      const { data: lead, error } = await supabase
+        .from('quiz_responses')
+        .insert({
+          session_id: session,
+          email,
+          character_type: character,
+          body_type: bodyType,
+          source: source || 'quiz',
+          created_at: new Date().toISOString(),
+          metadata: {
+            character,
+            body: bodyType,
+            session,
+            source,
+            userAgent: request.headers.get('user-agent'),
+            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
+          }
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        logger.error({ ...ctx, error }, 'Failed to store lead');
+        return NextResponse.json(
+          { success: false, error: 'Failed to store lead' },
+          { status: 500 }
+        );
+      }
+      
+      leadId = lead.id;
+    }
+    
+    logger.info({ 
+      ...ctx, 
+      leadId, 
       email: email.substring(0, 3) + '***',
       character,
       bodyType,
-      session,
-      source,
-      timestamp: new Date().toISOString(),
-      userAgent: request.headers.get('user-agent'),
-      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
-    });
-
-    // Simple success response - can be enhanced later with actual email service integration
+      isExisting: !!existingLead
+    }, 'Lead captured successfully');
+    
     return NextResponse.json({
       success: true,
       message: 'Lead captured successfully',
-      sessionId: session,
+      leadId,
+      sessionId: session
     });
 
   } catch (error) {
-    console.error('❌ Lead capture API error:', error);
+    const logger = await getLogger();
+    
+    logger.error({ 
+      name: 'capture-lead',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    }, 'Lead capture API error');
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

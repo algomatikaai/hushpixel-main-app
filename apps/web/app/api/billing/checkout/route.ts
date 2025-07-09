@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createBillingGatewayService } from '@kit/billing-gateway';
 import { getLogger } from '@kit/shared/logger';
 import { z } from 'zod';
+import billingConfig from '~/config/billing.config';
 
 const CreateCheckoutSchema = z.object({
   planId: z.string().min(1),
@@ -38,31 +39,33 @@ export const POST = enhanceRouteHandler(
       return NextResponse.json({ error: 'Account not found' }, { status: 404 });
     }
 
-    // Map plan IDs to actual Stripe price IDs
-    const planIdMap = {
-      'premium-monthly': process.env.HUSHPIXEL_PREMIUM_MONTHLY_PRICE_ID || 'price_test_mock_monthly',
-      'premium-annual': process.env.HUSHPIXEL_PREMIUM_ANNUAL_PRICE_ID || 'price_test_mock_annual'
-    };
-
-    const stripePriceId = planIdMap[body.planId as keyof typeof planIdMap];
+    // Find the plan from billing configuration
+    const allPlans = billingConfig.products.flatMap(product => product.plans);
+    const selectedPlan = allPlans.find(plan => plan.id === body.planId);
     
-    logger.info({ ...ctx, planId: body.planId, stripePriceId }, 'Stripe price ID mapping');
-    
-    if (!stripePriceId) {
-      logger.error({ ...ctx, availablePlans: Object.keys(planIdMap) }, 'Invalid plan ID provided');
+    if (!selectedPlan) {
+      logger.error({ ...ctx, availablePlans: allPlans.map(p => p.id) }, 'Invalid plan ID provided');
       return NextResponse.json({ error: 'Invalid plan ID' }, { status: 400 });
     }
+
+    logger.info({ ...ctx, planId: body.planId, planName: selectedPlan.name }, 'Plan found successfully');
 
     try {
       const billingGateway = createBillingGatewayService('stripe');
       
-      // Create checkout session
-      const session = await billingGateway.createCheckoutSession({
+      // Build variant quantities from line items
+      const variantQuantities = selectedPlan.lineItems.map(item => ({
+        variantId: item.id,
+        quantity: 1
+      }));
+      
+      // Create checkout session with correct parameters
+      const result = await billingGateway.createCheckoutSession({
         accountId: account.id,
         customerId: undefined, // Will be created if doesn't exist
-        priceId: stripePriceId,
-        successUrl: body.successUrl,
-        cancelUrl: body.cancelUrl,
+        plan: selectedPlan,
+        returnUrl: body.successUrl, // Use returnUrl instead of successUrl/cancelUrl
+        variantQuantities,
         metadata: {
           accountId: account.id,
           userId: user.id,
@@ -71,12 +74,11 @@ export const POST = enhanceRouteHandler(
         }
       });
 
-      logger.info({ ...ctx, sessionId: session.id }, 'Checkout session created successfully');
+      logger.info({ ...ctx, checkoutToken: result.checkoutToken ? 'present' : 'missing' }, 'Checkout session created successfully');
 
       return NextResponse.json({
         success: true,
-        checkoutUrl: session.url,
-        sessionId: session.id
+        checkoutToken: result.checkoutToken
       });
 
     } catch (error) {
@@ -84,8 +86,8 @@ export const POST = enhanceRouteHandler(
         ...ctx, 
         error: error instanceof Error ? error.message : error,
         stack: error instanceof Error ? error.stack : undefined,
-        stripePriceId,
-        planId: body.planId
+        planId: body.planId,
+        planName: selectedPlan.name
       }, 'Failed to create checkout session');
       
       return NextResponse.json(
