@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Badge } from '@kit/ui/badge';
 import { Check, Crown, Sparkles, Shield, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-import { StripeCheckout } from '@kit/billing/stripe';
+import { StripeCheckout } from '@kit/stripe/components';
 
 interface PremiumCheckoutProps {
   userId?: string;
