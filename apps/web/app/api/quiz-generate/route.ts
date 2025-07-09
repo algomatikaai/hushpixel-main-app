@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { generateCompanionImage, getGenerationErrorMessage } from '@/lib/modelslab-api';
+import { generateCompanionImage, getGenerationErrorMessage } from '~/lib/modelslab-api';
 
 const QuizGenerateRequestSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required'),

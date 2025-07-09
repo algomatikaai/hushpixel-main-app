@@ -8,6 +8,7 @@ import { Spinner } from '@kit/ui/spinner';
 import { Alert, AlertDescription } from '@kit/ui/alert';
 import { Loader2, Sparkles, Crown, Heart, Download, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { trackFBQuizEvent } from '../quiz/_components/facebook-pixel';
 
 interface QuizAutoGenerateProps {
   character: string;
@@ -72,9 +73,14 @@ export function QuizAutoGenerate({ character, body, email, session }: QuizAutoGe
 
   // Auto-generate image on component mount
   useEffect(() => {
+    let isMounted = true;
+    
     const generateImage = async () => {
       try {
+        if (!isMounted) return;
+        
         setIsGenerating(true);
+        setError(null);
         
         // Build enhanced NSFW prompt for maximum WOW factor
         const characterPrompt = CHARACTER_PROMPTS[character as keyof typeof CHARACTER_PROMPTS] || 'beautiful woman';
@@ -104,7 +110,20 @@ export function QuizAutoGenerate({ character, body, email, session }: QuizAutoGe
         
         console.log('🎨 Generating image with prompt:', fullPrompt);
         
-        // Call anonymous quiz generation API
+        // Track generation start event
+        trackFBQuizEvent('InitiateCheckout', {
+          content_name: 'AI Companion Generation Started',
+          content_category: 'AI Generation',
+          character_type: character,
+          body_type: body,
+          value: 0,
+          currency: 'USD'
+        });
+        
+        // Call anonymous quiz generation API with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        
         const response = await fetch('/api/quiz-generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -114,13 +133,18 @@ export function QuizAutoGenerate({ character, body, email, session }: QuizAutoGe
             body: body,
             email: email,
             sessionId: session
-          })
+          }),
+          signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
+        
+        if (!isMounted) return;
+        
         const data = await response.json();
         
         if (!response.ok) {
-          throw new Error(data.error || 'Generation failed');
+          throw new Error(data.error || `Server error: ${response.status}`);
         }
 
         if (data.success) {
@@ -131,6 +155,18 @@ export function QuizAutoGenerate({ character, body, email, session }: QuizAutoGe
             prompt: fullPrompt,
             success: true
           });
+          
+          // Track successful generation
+          trackFBQuizEvent('ViewContent', {
+            content_name: 'AI Companion Generated',
+            content_category: 'AI Generation',
+            character_type: character,
+            body_type: body,
+            character_name: characterName,
+            value: 24.99,
+            currency: 'USD'
+          });
+          
           toast.success(`Meet ${characterName}! Your perfect companion is ready.`);
         } else {
           throw new Error(data.error || 'Generation failed');
@@ -138,16 +174,32 @@ export function QuizAutoGenerate({ character, body, email, session }: QuizAutoGe
         
       } catch (err) {
         console.error('Generation error:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Failed to generate your companion';
+        if (!isMounted) return;
+        
+        let errorMessage = 'Failed to generate your companion';
+        if (err instanceof Error) {
+          if (err.name === 'AbortError') {
+            errorMessage = 'Generation timed out. Please try again.';
+          } else {
+            errorMessage = err.message;
+          }
+        }
+        
         setError(errorMessage);
         toast.error(errorMessage);
       } finally {
-        setIsGenerating(false);
+        if (isMounted) {
+          setIsGenerating(false);
+        }
       }
     };
 
     generateImage();
-  }, [character, body, session]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [character, body, email, session]);
 
   // Generate character name based on selections
   const generateCharacterName = (charType: string, bodyType: string): string => {
@@ -294,6 +346,17 @@ function GenerationSuccess({ result, character, body, email }: {
   };
 
   const handleUpgrade = () => {
+    // Track upgrade button click
+    trackFBQuizEvent('AddToCart', {
+      content_name: 'HushPixel Premium Monthly',
+      content_category: 'Subscription',
+      character_type: character,
+      body_type: body,
+      character_name: result?.characterName,
+      value: 24.99,
+      currency: 'USD'
+    });
+    
     // Store user's companion data for post-authentication
     const companionData = {
       characterName: result.characterName,

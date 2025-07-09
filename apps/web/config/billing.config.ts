@@ -25,7 +25,7 @@ export default createBillingSchema({
           interval: 'month',
           lineItems: [
             {
-              id: process.env.HUSHPIXEL_PREMIUM_PRICE_ID || 'price_test_mock_monthly',
+              id: process.env.HUSHPIXEL_PREMIUM_MONTHLY_PRICE_ID || 'price_test_mock_monthly',
               name: 'Premium Monthly',
               cost: 24.99,
               type: 'flat' as const,

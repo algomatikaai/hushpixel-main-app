@@ -48,7 +48,7 @@ type RootProvidersProps = React.PropsWithChildren<{
 
 export function RootProviders({
   lang,
-  theme = appConfig.theme,
+  theme = 'dark',
   nonce,
   children,
 }: RootProvidersProps) {

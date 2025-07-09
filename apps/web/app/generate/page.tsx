@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { QuizAutoGenerate } from './quiz-auto-generate';
+import { FacebookPixel } from '../quiz/_components/facebook-pixel';
 
 interface GeneratePageProps {
   searchParams: Promise<{ 
@@ -21,14 +22,19 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
   // Handle quiz flow - auto-generate based on quiz selections (anonymous users)
   if (character && body && email && session) {
     console.log('Quiz flow detected:', { character, body, email: email.substring(0, 3) + '***', session });
-    return <Suspense fallback={<GenerationLoading />}>
-      <QuizAutoGenerate 
-        character={character}
-        body={body}
-        email={decodeURIComponent(email)}
-        session={session}
-      />
-    </Suspense>;
+    return (
+      <>
+        <FacebookPixel />
+        <Suspense fallback={<GenerationLoading />}>
+          <QuizAutoGenerate 
+            character={character}
+            body={body}
+            email={decodeURIComponent(email)}
+            session={session}
+          />
+        </Suspense>
+      </>
+    );
   }
 
   // Check if user is authenticated - if so, redirect to workspace

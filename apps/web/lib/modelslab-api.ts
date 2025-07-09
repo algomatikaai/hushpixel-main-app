@@ -42,6 +42,8 @@ class ModelsLabAPI {
     
     if (isMockMode) {
       console.log('ModelsLab API initialized in MOCK MODE - will return Unsplash placeholders');
+    } else {
+      console.log('ModelsLab API initialized in PRODUCTION MODE with real API');
     }
   }
 
@@ -84,36 +86,36 @@ class ModelsLabAPI {
     }
     
     try {
-      // Build the request payload for real API
+      // Build the request payload for real API (using correct ModelsLab format)
       const payload = {
-        prompt: this.enhancePrompt(request.prompt),
+        key: this.apiKey,
         model_id: this.selectModel(request.quality),
-        width: request.quality === 'hd' ? 1024 : 512,
-        height: request.quality === 'hd' ? 1024 : 512,
-        num_inference_steps: request.isFirstGeneration ? 35 : 25, // Higher quality for first generation
-        guidance_scale: 7.5,
+        prompt: this.enhancePrompt(request.prompt),
         negative_prompt: request.negativePrompt || DEFAULT_NEGATIVE_PROMPT,
-        nsfw: true,
-        enhance_prompt: true,
-        seed: request.characterSeed ? parseInt(request.characterSeed) : undefined,
+        width: (request.quality === 'hd' ? 1024 : 512).toString(),
+        height: (request.quality === 'hd' ? 1024 : 512).toString(),
+        samples: "1",
+        num_inference_steps: (request.isFirstGeneration ? 35 : 25).toString(),
+        guidance_scale: 7.5,
+        enhance_prompt: "yes",
+        seed: request.characterSeed ? parseInt(request.characterSeed.replace(/[^0-9]/g, '')) : null,
         scheduler: "DPMSolverMultistepScheduler",
-        safety_checker: false,
+        safety_checker: "no",
         webhook: null,
         track_id: null
       };
 
       console.log('ModelsLab API request:', { 
-        prompt: payload.prompt,
+        prompt: payload.prompt.substring(0, 100) + '...',
         model: payload.model_id,
         dimensions: `${payload.width}x${payload.height}`,
         seed: payload.seed
       });
 
-      const response = await fetch(`${this.baseUrl}/realtime/text2img`, {
+      const response = await fetch(`${this.baseUrl}/images/text2img`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });
@@ -126,7 +128,19 @@ class ModelsLabAPI {
       const data = await response.json();
       const processingTime = Date.now() - startTime;
 
-      // Handle different response formats
+      // Handle ModelsLab API response format
+      if (data.status === 'error') {
+        throw new Error(data.message || 'ModelsLab API error');
+      }
+
+      // Handle processing status (async generation)
+      if (data.status === 'processing') {
+        // For processing status, we would need to poll the fetch URL
+        // For now, return an error to trigger retry
+        throw new Error('Generation is processing, please retry');
+      }
+
+      // Handle success response
       let imageUrl: string;
       if (data.output && Array.isArray(data.output) && data.output.length > 0) {
         imageUrl = data.output[0];
@@ -140,6 +154,8 @@ class ModelsLabAPI {
 
       console.log('ModelsLab generation successful:', { 
         processingTime, 
+        status: data.status,
+        generationTime: data.generationTime,
         imageUrl: imageUrl.substring(0, 50) + '...' 
       });
 
@@ -150,7 +166,8 @@ class ModelsLabAPI {
         metadata: {
           model: payload.model_id,
           seed: payload.seed?.toString() || 'random',
-          steps: payload.num_inference_steps
+          steps: parseInt(payload.num_inference_steps),
+          generationTime: data.generationTime
         }
       };
 
