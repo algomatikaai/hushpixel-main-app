@@ -53,6 +53,18 @@ class ModelsLabAPI {
     // Check if we're in mock mode for development
     const isMockMode = this.apiKey === "mock_key_for_development";
     
+    console.log('🔧 ModelsLab API configuration:', {
+      apiKey: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'NOT SET',
+      baseUrl: this.baseUrl,
+      isMockMode,
+      requestParams: {
+        prompt: request.prompt.substring(0, 100) + '...',
+        quality: request.quality,
+        isFirstGeneration: request.isFirstGeneration,
+        characterSeed: request.characterSeed
+      }
+    });
+    
     if (isMockMode) {
       console.log('ModelsLab API: Running in mock mode, returning Unsplash placeholder');
       
@@ -101,13 +113,25 @@ class ModelsLabAPI {
         safety_checker: "no"
       };
 
-      console.log('ModelsLab API request:', { 
+      console.log('🚀 ModelsLab API request payload:', {
+        model_id: payload.model_id,
         prompt: payload.prompt.substring(0, 100) + '...',
-        model: payload.model_id,
         dimensions: `${payload.width}x${payload.height}`,
-        seed: payload.seed
+        num_inference_steps: payload.num_inference_steps,
+        guidance_scale: payload.guidance_scale,
+        scheduler: payload.scheduler,
+        safety_checker: payload.safety_checker,
+        samples: payload.samples
+      });
+      
+      console.log('🔑 API key check:', {
+        hasApiKey: !!payload.key,
+        keyLength: payload.key?.length || 0,
+        keyPrefix: payload.key?.substring(0, 8) || 'none'
       });
 
+      console.log('🌐 Making request to:', `${this.baseUrl}/images/text2img`);
+      
       const response = await fetch(`${this.baseUrl}/images/text2img`, {
         method: 'POST',
         headers: {
@@ -115,17 +139,58 @@ class ModelsLabAPI {
         },
         body: JSON.stringify(payload)
       });
+      
+      console.log('📊 Response status:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`ModelsLab API error: ${response.status} - ${errorData.message || 'Unknown error'}`);
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error('❌ ModelsLab API error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText: errorText.substring(0, 500) + (errorText.length > 500 ? '...' : ''),
+          headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        let errorData = {};
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          console.error('Could not parse error response as JSON:', e);
+        }
+        
+        throw new Error(`ModelsLab API error: ${response.status} - ${errorData.message || errorText || 'Unknown error'}`);
       }
 
-      const data = await response.json();
+      const responseText = await response.text();
+      console.log('📝 Raw ModelsLab response:', responseText.substring(0, 1000) + (responseText.length > 1000 ? '...' : ''));
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('❌ Failed to parse ModelsLab response as JSON:', e);
+        throw new Error(`Invalid JSON response from ModelsLab: ${responseText.substring(0, 200)}`);
+      }
+      
       const processingTime = Date.now() - startTime;
+      
+      console.log('📊 Parsed ModelsLab response:', {
+        status: data.status,
+        message: data.message,
+        hasOutput: !!data.output,
+        outputType: typeof data.output,
+        outputLength: Array.isArray(data.output) ? data.output.length : 'not array',
+        processingTime
+      });
 
       // Handle ModelsLab API response format
       if (data.status === 'error') {
+        console.error('❌ ModelsLab returned error status:', data.message);
         throw new Error(data.message || 'ModelsLab API error');
       }
 
@@ -169,7 +234,12 @@ class ModelsLabAPI {
 
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      console.error('ModelsLab generation failed:', error);
+      console.error('❌ ModelsLab generation failed:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        type: error instanceof Error ? error.constructor.name : typeof error,
+        processingTime
+      });
       
       return {
         success: false,
