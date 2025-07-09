@@ -185,9 +185,9 @@ class ModelsLabAPI {
     
     switch (quality) {
       case 'hd':
-        return envModel || 'ultraepicai-realism-v1-0'; // Premium quality for first impressions
+        return envModel || 'aiprealistic-sdxl-nsfw-v1-0'; // Premium quality for first impressions
       default:
-        return envModel || 'ultraepicai-realism-v1-0'; // Always use best model for WOW factor
+        return envModel || 'aiprealistic-sdxl-nsfw-v1-0'; // Always use best model for WOW factor
     }
   }
 
