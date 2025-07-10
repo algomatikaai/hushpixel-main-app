@@ -44,65 +44,31 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseServerClient();
     const adminClient = getSupabaseServerAdminClient();
 
-    // Debug admin client structure
-    logger.info(ctx, 'Admin client debug:', {
-      hasAuth: !!adminClient.auth,
-      hasAdmin: !!adminClient.auth?.admin,
-      adminMethods: adminClient.auth?.admin ? Object.keys(adminClient.auth.admin) : 'no admin',
-      getUserByEmailType: typeof adminClient.auth?.admin?.getUserByEmail
+    // Simplified approach: Create user directly and generate magic link
+    logger.info(ctx, 'Creating user and generating magic link...');
+    
+    // Generate a secure temporary password
+    const tempPassword = `temp_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+    
+    // Create user with admin client
+    const { data: newUser, error: signUpError } = await adminClient.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true, // Auto-confirm email for bridge users
+      user_metadata: {
+        created_via: 'quiz_bridge',
+        session_id: sessionId,
+        source: source || 'quiz'
+      }
     });
 
-    // Check if user already exists using admin client
-    logger.info(ctx, 'Checking existing user...');
-    
-    const { data: existingUser, error: userError } = await adminClient.auth.admin.getUserByEmail(email);
-
-    if (userError && userError.code !== 'user_not_found') {
-      logger.error({ ...ctx, error: userError }, 'Error checking existing user');
-      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    if (signUpError || !newUser.user) {
+      logger.error({ ...ctx, error: signUpError }, 'Failed to create bridge user');
+      return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
     }
 
-    let userId = existingUser?.user?.id;
-
-    // If user doesn't exist, create them with a temporary password
-    if (!existingUser?.user) {
-      logger.info(ctx, 'Creating new user via bridge auth');
-      
-      // Generate a secure temporary password
-      const tempPassword = `temp_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
-      
-      const { data: newUser, error: signUpError } = await adminClient.auth.admin.createUser({
-        email,
-        password: tempPassword,
-        email_confirm: true, // Auto-confirm email for bridge users
-        user_metadata: {
-          created_via: 'quiz_bridge',
-          session_id: sessionId,
-          source: source || 'quiz'
-        }
-      });
-
-      if (signUpError || !newUser.user) {
-        logger.error({ ...ctx, error: signUpError }, 'Failed to create bridge user');
-        return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
-      }
-
-      userId = newUser.user.id;
-
-      // Create personal account for the new user
-      const { error: accountError } = await supabase
-        .from('accounts')
-        .insert([{
-          name: 'Personal',
-          slug: `user-${userId}`,
-          primary_owner_user_id: userId,
-          is_personal_account: true
-        }]);
-
-      if (accountError) {
-        logger.error({ ...ctx, error: accountError }, 'Failed to create personal account');
-      }
-    }
+    const userId = newUser.user.id;
+    logger.info({ ...ctx, userId }, 'User created successfully');
 
     // Generate a temporary auth token that can be used for checkout
     const { data: session, error: sessionError } = await adminClient.auth.admin.generateLink({
