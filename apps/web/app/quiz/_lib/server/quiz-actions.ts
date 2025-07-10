@@ -49,7 +49,7 @@ export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema
 
     console.log('✅ Quiz submission completed successfully (new flow)');
 
-    // Return success with checkout redirect URL
+    // Return success with generate URL for WOW moment
     return { 
       success: true, 
       data: {
@@ -57,7 +57,7 @@ export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema
         email: validatedData.email,
         characterType: validatedData.characterType,
         bodyType: validatedData.bodyType,
-        redirectUrl: `/checkout?email=${encodeURIComponent(validatedData.email)}&source=quiz&session=${sessionId}`
+        redirectUrl: result.generateUrl
       }
     };
   } catch (error) {

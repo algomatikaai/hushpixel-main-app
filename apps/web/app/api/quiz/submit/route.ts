@@ -59,13 +59,13 @@ export async function POST(request: NextRequest) {
 
     logger.info({ ...ctx, quizId: quizData.id }, 'Quiz responses stored successfully');
 
-    // Generate checkout URL that will create user after payment
-    const checkoutUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?session=${sessionId}&email=${encodeURIComponent(email)}&source=${source || 'quiz'}`;
+    // Generate URL for instant AI generation (WOW moment)
+    const generateUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/generate?character=${responses.character_type}&body=${responses.body_type}&email=${encodeURIComponent(email)}&session=${sessionId}&source=${source || 'quiz'}`;
 
     return NextResponse.json({
       success: true,
       message: 'Quiz submitted successfully',
-      checkoutUrl,
+      generateUrl,
       sessionId,
       leadCaptured: true
     });
