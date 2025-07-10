@@ -40,7 +40,20 @@ export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheck
     setIsLoading(true);
     
     try {
-      // Call MakerKit billing API to create checkout session
+      // For guest checkout, redirect to sign-up with checkout intent
+      if (isGuestCheckout && !userId) {
+        const signupUrl = new URL('/auth/sign-up', window.location.origin);
+        signupUrl.searchParams.set('next', '/checkout');
+        signupUrl.searchParams.set('plan', selectedPlan === 'monthly' ? 'premium-monthly' : 'premium-annual');
+        if (source) signupUrl.searchParams.set('source', source);
+        if (email) signupUrl.searchParams.set('email', email);
+        if (sessionId) signupUrl.searchParams.set('session', sessionId);
+        
+        window.location.href = signupUrl.toString();
+        return;
+      }
+
+      // Call MakerKit billing API to create checkout session for authenticated users
       const response = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,7 +64,8 @@ export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheck
           metadata: {
             source,
             email,
-            plan: selectedPlan
+            plan: selectedPlan,
+            sessionId
           }
         })
       });
