@@ -194,7 +194,8 @@ create table if not exists
     body_type varchar(50) not null,
     personality varchar(50),
     source varchar(50) default 'quiz' not null,
-    status varchar(20) default 'completed' not null check (status in ('completed', 'pending')),
+    status varchar(20) default 'completed' not null check (status in ('completed', 'pending', 'converted')),
+    user_id uuid references auth.users on delete set null,
     submitted_at timestamp with time zone default current_timestamp not null,
     created_at timestamp with time zone default current_timestamp not null,
     updated_at timestamp with time zone default current_timestamp not null,
@@ -208,7 +209,8 @@ comment on column public.quiz_responses.character_type is 'Selected character ty
 comment on column public.quiz_responses.body_type is 'Selected body type preference';
 comment on column public.quiz_responses.personality is 'Optional personality preference';
 comment on column public.quiz_responses.source is 'Source of the quiz completion (quiz, campaign, etc.)';
-comment on column public.quiz_responses.status is 'Status of the quiz response';
+comment on column public.quiz_responses.status is 'Status of the quiz response (completed, pending, converted)';
+comment on column public.quiz_responses.user_id is 'User ID if converted to a paying customer (nullable for leads)';
 
 -- Enable RLS on the quiz_responses table
 alter table public.quiz_responses enable row level security;
@@ -218,6 +220,8 @@ create index if not exists ix_quiz_responses_session_id on public.quiz_responses
 create index if not exists ix_quiz_responses_email on public.quiz_responses (email);
 create index if not exists ix_quiz_responses_submitted_at on public.quiz_responses (submitted_at desc);
 create index if not exists ix_quiz_responses_source on public.quiz_responses (source);
+create index if not exists ix_quiz_responses_user_id on public.quiz_responses (user_id);
+create index if not exists ix_quiz_responses_status on public.quiz_responses (status);
 
 -- Revoke all permissions and grant specific ones
 revoke all on public.quiz_responses from authenticated, service_role;
