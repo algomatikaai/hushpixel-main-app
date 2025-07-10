@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { enhanceRouteHandler } from '@kit/next/routes';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getLogger } from '@kit/shared/logger';
@@ -12,14 +11,20 @@ const BridgeAuthSchema = z.object({
   redirectTo: z.string().optional()
 });
 
-export const POST = enhanceRouteHandler(
-  async function ({ body, request }) {
-    const logger = await getLogger();
-    const ctx = { name: 'bridge-auth' };
+export async function POST(request: NextRequest) {
+  const logger = await getLogger();
+  const ctx = { name: 'bridge-auth' };
+
+  try {
+    // Parse and validate request body
+    const body = await request.json();
+    const { email, sessionId, source, redirectTo } = BridgeAuthSchema.parse(body);
 
     logger.info({
       ...ctx,
-      body,
+      email: email.substring(0, 3) + '***',
+      sessionId,
+      source,
       timestamp: new Date().toISOString()
     }, 'Bridge auth request received');
 
@@ -35,10 +40,6 @@ export const POST = enhanceRouteHandler(
       }
     }, 'Bridge auth environment check');
 
-    const { email, sessionId, source, redirectTo } = body;
-
-    logger.info(ctx, `Bridge auth request for email: ${email.substring(0, 3)}***`);
-
     // Create Supabase clients
     const supabase = getSupabaseServerClient();
     const adminClient = getSupabaseServerAdminClient();
@@ -46,18 +47,7 @@ export const POST = enhanceRouteHandler(
     // Check if user already exists using admin client
     logger.info(ctx, 'Checking existing user...');
     
-    let existingUser = null;
-    let userError = null;
-    
-    try {
-      const result = await adminClient.auth.admin.getUserByEmail(email);
-      existingUser = result.data;
-      userError = result.error;
-      logger.info(ctx, 'getUserByEmail executed successfully');
-    } catch (error) {
-      logger.error({ ...ctx, error }, 'getUserByEmail failed');
-      userError = error;
-    }
+    const { data: existingUser, error: userError } = await adminClient.auth.admin.getUserByEmail(email);
 
     if (userError && userError.code !== 'user_not_found') {
       logger.error({ ...ctx, error: userError }, 'Error checking existing user');
@@ -140,9 +130,27 @@ export const POST = enhanceRouteHandler(
       userId,
       message: 'Authentication bridge created successfully'
     });
-  },
-  {
-    auth: false, // Allow unauthenticated access for quiz users
-    schema: BridgeAuthSchema,
+
+  } catch (error) {
+    logger.error({ 
+      ...ctx, 
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    }, 'Bridge auth failed');
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Invalid request data', 
+        details: error.errors
+      }, { status: 400 });
+    }
+
+    return NextResponse.json({ 
+      success: false,
+      error: 'Failed to create authentication bridge',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
-);
+}
