@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { enhanceRouteHandler } from '@kit/next/routes';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getLogger } from '@kit/shared/logger';
@@ -11,11 +12,17 @@ const BridgeAuthSchema = z.object({
   redirectTo: z.string().optional()
 });
 
-export async function POST(request: NextRequest) {
-  const logger = await getLogger();
-  const ctx = { name: 'auth.bridge' };
+export const POST = enhanceRouteHandler(
+  async function ({ body, request }) {
+    const logger = await getLogger();
+    const ctx = { name: 'bridge-auth' };
 
-  try {
+    logger.info({
+      ...ctx,
+      body,
+      timestamp: new Date().toISOString()
+    }, 'Bridge auth request received');
+
     // Debug environment variables (without exposing sensitive data)
     logger.info({
       ...ctx,
@@ -25,34 +32,16 @@ export async function POST(request: NextRequest) {
         SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
         ANON_KEY_SET: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         SERVICE_KEY_SET: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        SERVICE_KEY_LENGTH: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
       }
     }, 'Bridge auth environment check');
 
-    const body = await request.json();
-    const { email, sessionId, source, redirectTo } = BridgeAuthSchema.parse(body);
+    const { email, sessionId, source, redirectTo } = body;
 
     logger.info(ctx, `Bridge auth request for email: ${email.substring(0, 3)}***`);
 
-    // Test regular Supabase client creation
-    let supabase;
-    try {
-      supabase = getSupabaseServerClient();
-      logger.info(ctx, 'Regular Supabase client created successfully');
-    } catch (error) {
-      logger.error({ ...ctx, error }, 'Failed to create regular Supabase client');
-      throw new Error(`Regular Supabase client creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-
-    // Test admin client creation with detailed error handling
-    let adminClient;
-    try {
-      adminClient = getSupabaseServerAdminClient();
-      logger.info(ctx, 'Admin Supabase client created successfully');
-    } catch (error) {
-      logger.error({ ...ctx, error }, 'Failed to create admin Supabase client');
-      throw new Error(`Admin Supabase client creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    // Create Supabase clients
+    const supabase = getSupabaseServerClient();
+    const adminClient = getSupabaseServerAdminClient();
 
     // Check if user already exists using admin client
     const { data: existingUser, error: userError } = await adminClient.auth.admin.getUserByEmail(email);
@@ -138,58 +127,9 @@ export async function POST(request: NextRequest) {
       userId,
       message: 'Authentication bridge created successfully'
     });
-
-  } catch (error) {
-    // Enhanced error logging with environment context
-    logger.error({ 
-      ...ctx, 
-      error,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      errorStack: error instanceof Error ? error.stack : undefined,
-      env_debug: {
-        NODE_ENV: process.env.NODE_ENV,
-        SERVICE_KEY_SET: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        ANON_KEY_SET: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        SUPABASE_URL_SET: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      }
-    }, 'Bridge auth failed with detailed context');
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ 
-        success: false,
-        error: 'Invalid request data', 
-        details: error.errors,
-        type: 'validation_error'
-      }, { status: 400 });
-    }
-
-    // Check for specific environment variable errors
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    if (errorMessage.includes('SUPABASE_SERVICE_ROLE_KEY')) {
-      return NextResponse.json({ 
-        success: false,
-        error: 'Server configuration error',
-        details: 'Supabase service role key not configured',
-        type: 'env_config_error'
-      }, { status: 500 });
-    }
-
-    if (errorMessage.includes('NEXT_PUBLIC_SUPABASE_URL')) {
-      return NextResponse.json({ 
-        success: false,
-        error: 'Server configuration error',
-        details: 'Supabase URL not configured',
-        type: 'env_config_error'
-      }, { status: 500 });
-    }
-
-    return NextResponse.json({ 
-      success: false,
-      error: 'Failed to create authentication bridge',
-      details: errorMessage,
-      type: 'internal_error',
-      timestamp: new Date().toISOString()
-    }, { status: 500 });
+  },
+  {
+    auth: false, // Allow unauthenticated access for quiz users
+    schema: BridgeAuthSchema,
   }
-}
+);
