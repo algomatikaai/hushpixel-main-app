@@ -86,6 +86,16 @@ export const POST = enhanceRouteHandler(
         quantity: 1
       }));
       
+      logger.info({ 
+        ...ctx, 
+        planDetails: {
+          planId: body.planId,
+          planName: selectedPlan.name,
+          lineItems: selectedPlan.lineItems,
+          variantQuantities
+        }
+      }, 'Starting checkout session creation');
+      
       // Create checkout session with correct parameters
       const result = await billingGateway.createCheckoutSession({
         accountId: account.id,
@@ -114,7 +124,9 @@ export const POST = enhanceRouteHandler(
         error: error instanceof Error ? error.message : error,
         stack: error instanceof Error ? error.stack : undefined,
         planId: body.planId,
-        planName: selectedPlan.name
+        planName: selectedPlan.name,
+        selectedPlanDetails: selectedPlan,
+        stripeError: error instanceof Error && 'type' in error ? error : undefined
       }, 'Failed to create checkout session');
       
       return NextResponse.json(
