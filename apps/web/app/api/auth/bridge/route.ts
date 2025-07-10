@@ -44,6 +44,16 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseServerClient();
     const adminClient = getSupabaseServerAdminClient();
 
+    // Test admin client first
+    logger.info(ctx, 'Testing admin client with listUsers...');
+    try {
+      await adminClient.auth.admin.listUsers({ page: 1, perPage: 1 });
+      logger.info(ctx, 'Admin client test successful');
+    } catch (error) {
+      logger.error({ ...ctx, error }, 'Admin client test failed');
+      return NextResponse.json({ error: 'Admin client not working' }, { status: 500 });
+    }
+    
     // Simplified approach: Create user directly and generate magic link
     logger.info(ctx, 'Creating user and generating magic link...');
     
