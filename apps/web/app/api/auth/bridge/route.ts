@@ -44,6 +44,11 @@ export const POST = enhanceRouteHandler(
     const adminClient = getSupabaseServerAdminClient();
 
     // Check if user already exists using admin client
+    logger.info(ctx, 'Testing admin client methods...');
+    logger.info(ctx, `Admin client auth: ${!!adminClient.auth}`);
+    logger.info(ctx, `Admin client auth.admin: ${!!adminClient.auth?.admin}`);
+    logger.info(ctx, `getUserByEmail method: ${typeof adminClient.auth?.admin?.getUserByEmail}`);
+    
     const { data: existingUser, error: userError } = await adminClient.auth.admin.getUserByEmail(email);
 
     if (userError && userError.code !== 'user_not_found') {
