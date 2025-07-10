@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { createClient } from '@supabase/supabase-js';
 import { getLogger } from '@kit/shared/logger';
 import { z } from 'zod';
 
@@ -31,7 +32,11 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     }, 'Quiz submission received');
 
-    const supabase = getSupabaseServerClient();
+    // Use service role for quiz submissions (bypasses RLS)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
     // Store quiz responses and lead data
     const { data: quizData, error: quizError } = await supabase
