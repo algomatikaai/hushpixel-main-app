@@ -176,3 +176,85 @@ end;
 $$;
 
 grant execute on function public.can_user_generate(uuid) to authenticated, service_role;
+
+/*
+ * -------------------------------------------------------
+ * Section: Quiz Responses
+ * Quiz responses and lead capture for HushPixel
+ * -------------------------------------------------------
+ */
+
+-- Create quiz_responses table for lead capture
+create table if not exists
+  public.quiz_responses (
+    id uuid unique not null default extensions.uuid_generate_v4(),
+    session_id varchar(255) unique not null,
+    email varchar(320) not null,
+    character_type varchar(50) not null,
+    body_type varchar(50) not null,
+    personality varchar(50),
+    source varchar(50) default 'quiz' not null,
+    status varchar(20) default 'completed' not null check (status in ('completed', 'pending')),
+    submitted_at timestamp with time zone default current_timestamp not null,
+    created_at timestamp with time zone default current_timestamp not null,
+    updated_at timestamp with time zone default current_timestamp not null,
+    primary key (id)
+  );
+
+comment on table public.quiz_responses is 'Quiz responses for lead capture and user preferences';
+comment on column public.quiz_responses.session_id is 'Unique session identifier for tracking quiz completion';
+comment on column public.quiz_responses.email is 'User email captured during quiz';
+comment on column public.quiz_responses.character_type is 'Selected character type preference';
+comment on column public.quiz_responses.body_type is 'Selected body type preference';
+comment on column public.quiz_responses.personality is 'Optional personality preference';
+comment on column public.quiz_responses.source is 'Source of the quiz completion (quiz, campaign, etc.)';
+comment on column public.quiz_responses.status is 'Status of the quiz response';
+
+-- Enable RLS on the quiz_responses table
+alter table public.quiz_responses enable row level security;
+
+-- Create indexes for performance
+create index if not exists ix_quiz_responses_session_id on public.quiz_responses (session_id);
+create index if not exists ix_quiz_responses_email on public.quiz_responses (email);
+create index if not exists ix_quiz_responses_submitted_at on public.quiz_responses (submitted_at desc);
+create index if not exists ix_quiz_responses_source on public.quiz_responses (source);
+
+-- Revoke all permissions and grant specific ones
+revoke all on public.quiz_responses from authenticated, service_role;
+grant select, insert, update, delete on table public.quiz_responses to authenticated, service_role;
+
+-- RLS Policies for quiz_responses
+
+-- Allow anonymous users to insert quiz responses (for lead capture)
+create policy "anonymous_insert_quiz_responses" on public.quiz_responses
+  for insert
+  to anon, authenticated
+  with check (true);
+
+-- Allow anonymous users to read their own quiz responses by session_id
+create policy "anonymous_read_own_quiz_responses" on public.quiz_responses
+  for select
+  to anon, authenticated
+  using (true);
+
+-- Authenticated users can update quiz responses (admin purposes)
+create policy "authenticated_update_quiz_responses" on public.quiz_responses
+  for update
+  to authenticated
+  using (true)
+  with check (true);
+
+-- Function to get quiz response by session
+create or replace function public.get_quiz_response_by_session(target_session_id varchar)
+returns public.quiz_responses
+language sql
+security definer
+set search_path = ''
+as $$
+  select *
+  from public.quiz_responses
+  where session_id = target_session_id
+  limit 1;
+$$;
+
+grant execute on function public.get_quiz_response_by_session(varchar) to anon, authenticated, service_role;

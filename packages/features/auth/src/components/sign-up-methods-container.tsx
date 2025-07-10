@@ -130,12 +130,7 @@ function getDefaultValues() {
   }
 
   const searchParams = new URLSearchParams(window.location.search);
-  const inviteToken = searchParams.get('invite_token');
-
-  if (!inviteToken) {
-    return { email: '' };
-  }
-
+  
   return {
     email: searchParams.get('email') ?? '',
   };
