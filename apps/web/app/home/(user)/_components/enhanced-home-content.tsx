@@ -119,15 +119,16 @@ export function EnhancedHomeContent({ user, searchParams, analytics }: HomeConte
             <Separator />
             
             <div className="space-y-3">
-              <Button 
-                onClick={() => window.location.href = '/home/generate'}
-                className="w-full text-lg py-6" 
-                size="lg"
-              >
-                <Camera className="w-5 h-5 mr-2" />
-                {isNewUser ? 'Create Your First Companion' : 'Generate New Companion'}
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
+              <a href="/home/generate" className="block">
+                <Button 
+                  className="w-full text-lg py-6" 
+                  size="lg"
+                >
+                  <Camera className="w-5 h-5 mr-2" />
+                  {isNewUser ? 'Create Your First Companion' : 'Generate New Companion'}
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </a>
               
               {/* Show popular characters */}
               {analytics.popularCharacters.length > 0 && (
