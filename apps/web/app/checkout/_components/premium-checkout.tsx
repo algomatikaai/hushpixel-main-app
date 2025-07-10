@@ -9,12 +9,14 @@ import { toast } from 'sonner';
 import { StripeCheckout } from '@kit/stripe/components';
 
 interface PremiumCheckoutProps {
-  userId?: string;
+  userId?: string | null;
   email?: string;
   source?: string;
+  sessionId?: string;
+  isGuestCheckout?: boolean;
 }
 
-export function PremiumCheckout({ userId, email, source }: PremiumCheckoutProps) {
+export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheckout }: PremiumCheckoutProps) {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(23 * 60 + 47); // 23:47

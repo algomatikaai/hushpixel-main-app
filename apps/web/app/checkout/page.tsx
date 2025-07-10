@@ -11,20 +11,21 @@ interface CheckoutPageProps {
     source?: string;
     intent?: string;
     email?: string;
-    sessionId?: string;
+    session?: string; // Changed from sessionId to session
   }>;
 }
 
 export default async function CheckoutPage({ searchParams }: CheckoutPageProps) {
   const params = await searchParams;
-  const { plan, source, intent, email, sessionId } = params;
+  const { plan, source, intent, email, session } = params;
   
   // Check if user is authenticated
   const supabase = getSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   
-  // If not authenticated but we have quiz session data, show bridge auth
-  if (!user && email && source === 'quiz') {
+  // If not authenticated but we have quiz session data, allow guest checkout
+  // User will be created after payment via Stripe webhook
+  if (!user && email && source === 'quiz' && session) {
     return (
       <div className="min-h-screen bg-background p-4">
         <div className="container mx-auto py-8">
@@ -33,12 +34,12 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
               <Spinner className="h-12 w-12" />
             </div>
           }>
-            <QuizAuthBridge 
+            <PremiumCheckout 
+              userId={null} // Guest checkout
               email={email}
-              sessionId={sessionId}
-              plan={plan}
               source={source}
-              intent={intent}
+              sessionId={session}
+              isGuestCheckout={true}
             />
           </Suspense>
         </div>
