@@ -42,9 +42,7 @@ export async function POST(request: NextRequest) {
         character_type: responses.character_type,
         body_type: responses.body_type,
         personality: responses.personality,
-        source: source || 'quiz',
-        submitted_at: new Date().toISOString(),
-        status: 'completed'
+        source: source || 'quiz'
       }, {
         onConflict: 'session_id'
       })
