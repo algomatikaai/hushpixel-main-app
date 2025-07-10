@@ -10,7 +10,7 @@ const QuizSubmissionSchema = z.object({
 
 export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema>) {
   try {
-    console.log('🔄 Quiz submission started (session-based):', { email: data.email });
+    console.log('🔄 Quiz submission started (new flow):', { email: data.email });
     
     // Validate input data
     const validatedData = QuizSubmissionSchema.parse(data);
@@ -20,11 +20,36 @@ export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema
     const sessionId = `quiz_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     console.log('✅ Session ID generated:', sessionId);
     
-    // No database needed - just return success with session data
-    // Email will be captured via Facebook Pixel and URL params
-    console.log('✅ Quiz submission completed successfully (session-based)');
+    // Submit to new quiz API endpoint
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/quiz/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: validatedData.email,
+        sessionId: sessionId,
+        responses: {
+          character_type: validatedData.characterType,
+          body_type: validatedData.bodyType,
+        },
+        source: 'quiz'
+      }),
+    });
 
-    // Return success with generation redirect - pass all data via URL
+    if (!response.ok) {
+      throw new Error(`Quiz submission failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Quiz submission failed');
+    }
+
+    console.log('✅ Quiz submission completed successfully (new flow)');
+
+    // Return success with checkout redirect URL
     return { 
       success: true, 
       data: {
@@ -32,12 +57,12 @@ export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema
         email: validatedData.email,
         characterType: validatedData.characterType,
         bodyType: validatedData.bodyType,
-        redirectUrl: `/generate?character=${validatedData.characterType}&body=${validatedData.bodyType}&email=${encodeURIComponent(validatedData.email)}&session=${sessionId}`
+        redirectUrl: `/checkout?email=${encodeURIComponent(validatedData.email)}&source=quiz&session=${sessionId}`
       }
     };
   } catch (error) {
-    console.error('❌ Quiz submission unexpected error:', error);
+    console.error('❌ Quiz submission error:', error);
     console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    return { success: false, error: `Validation error: ${error instanceof Error ? error.message : 'Unknown error'}` };
+    return { success: false, error: `Submission failed: ${error instanceof Error ? error.message : 'Unknown error'}` };
   }
 }
