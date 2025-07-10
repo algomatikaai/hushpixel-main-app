@@ -27,16 +27,43 @@ export const POST = enhanceRouteHandler(
     const supabase = getSupabaseServerClient();
     
     // Get user's account
-    const { data: account, error: accountError } = await supabase
+    let { data: account, error: accountError } = await supabase
       .from('accounts')
       .select('id')
       .eq('primary_owner_user_id', user.id)
       .eq('is_personal_account', true)
       .single();
 
+    // If account doesn't exist, auto-create it (handles quiz users and other edge cases)
     if (accountError || !account) {
-      logger.error({ ...ctx, error: accountError }, 'Failed to get user account');
-      return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+      logger.info({ ...ctx, originalError: accountError }, 'Account not found, auto-creating for user');
+      
+      const { data: newAccount, error: createError } = await supabase
+        .from('accounts')
+        .insert({
+          id: user.id,
+          primary_owner_user_id: user.id,
+          name: user.email?.split('@')[0] || 'User',
+          is_personal_account: true,
+          email: user.email
+        })
+        .select('id')
+        .single();
+        
+      if (createError || !newAccount) {
+        logger.error({ 
+          ...ctx, 
+          originalError: accountError,
+          createError 
+        }, 'Failed to auto-create account for user');
+        return NextResponse.json({ 
+          error: 'Account setup failed',
+          details: createError?.message || 'Could not create account'
+        }, { status: 500 });
+      }
+      
+      account = newAccount;
+      logger.info({ ...ctx, accountId: account.id }, 'Successfully auto-created account for user');
     }
 
     // Find the plan from billing configuration
