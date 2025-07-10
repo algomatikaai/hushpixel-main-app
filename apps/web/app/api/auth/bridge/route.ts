@@ -44,6 +44,14 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseServerClient();
     const adminClient = getSupabaseServerAdminClient();
 
+    // Debug admin client structure
+    logger.info(ctx, 'Admin client debug:', {
+      hasAuth: !!adminClient.auth,
+      hasAdmin: !!adminClient.auth?.admin,
+      adminMethods: adminClient.auth?.admin ? Object.keys(adminClient.auth.admin) : 'no admin',
+      getUserByEmailType: typeof adminClient.auth?.admin?.getUserByEmail
+    });
+
     // Check if user already exists using admin client
     logger.info(ctx, 'Checking existing user...');
     
