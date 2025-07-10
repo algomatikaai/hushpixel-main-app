@@ -44,18 +44,20 @@ export const POST = enhanceRouteHandler(
     const adminClient = getSupabaseServerAdminClient();
 
     // Check if user already exists using admin client
-    logger.info(ctx, 'Testing admin client...');
+    logger.info(ctx, 'Checking existing user...');
     
-    // First test a simple operation to verify admin client works
+    let existingUser = null;
+    let userError = null;
+    
     try {
-      await adminClient.auth.admin.listUsers({ page: 1, perPage: 1 });
-      logger.info(ctx, 'Admin client basic test successful');
+      const result = await adminClient.auth.admin.getUserByEmail(email);
+      existingUser = result.data;
+      userError = result.error;
+      logger.info(ctx, 'getUserByEmail executed successfully');
     } catch (error) {
-      logger.error({ ...ctx, error }, 'Admin client basic test failed');
-      throw error;
+      logger.error({ ...ctx, error }, 'getUserByEmail failed');
+      userError = error;
     }
-    
-    const { data: existingUser, error: userError } = await adminClient.auth.admin.getUserByEmail(email);
 
     if (userError && userError.code !== 'user_not_found') {
       logger.error({ ...ctx, error: userError }, 'Error checking existing user');
