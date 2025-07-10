@@ -36,15 +36,13 @@ export async function POST(request: NextRequest) {
     // Store quiz responses and lead data
     const { data: quizData, error: quizError } = await supabase
       .from('quiz_responses')
-      .upsert({
+      .insert({
         session_id: sessionId,
         email,
         character_type: responses.character_type,
         body_type: responses.body_type,
         personality: responses.personality,
         source: source || 'quiz'
-      }, {
-        onConflict: 'session_id'
       })
       .select()
       .single();
