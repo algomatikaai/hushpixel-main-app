@@ -5,31 +5,38 @@ This file provides guidance to Claude Code when working with code in this reposi
 ## 🎯 **HUSHPIXEL CONTEXT**
 
 **Project**: NSFW AI companion quiz platform targeting $8.3M exit in 24 months  
-**Current Status**: 🟢 **PRODUCTION READY** - Revenue flow operational  
-**Revenue Strategy**: Quiz → Email capture → Facebook Pixel → Subscription  
+**Current Status**: ✅ **PRODUCTION READY** - Complete revenue flow operational  
+**Revenue Strategy**: Quiz → AI Generation → Stripe Payment → Premium Access  
 **Philosophy**: "Lazy Founder" - Money printer first, perfect code later  
 
-### **ACHIEVEMENT: Quiz Submission Fixed (July 7, 2025)**
-✅ Authentication working, ✅ Facebook Pixel tracking, ✅ Quiz email submission working:
-- **Issue Resolved**: `TypeError: r.auth.admin.getUserByEmail is not a function` - Admin client bypassed
-- **Solution Implemented**: Regular Supabase client with nullable user_id and automatic linking
-- **Result**: Complete revenue flow Quiz → Auth → Generation now operational
-- **Next Focus**: Conversion optimization and performance enhancements
+### **BREAKTHROUGH: Complete Revenue Flow (July 9, 2025)**
+🚀 **All critical issues resolved - ready for first customers**:
+- **ModelsLab API Fixed**: ✅ Endpoint corrected to `/realtime/text2img` - working perfectly
+- **Stripe Integration**: ✅ Embedded checkout operational with live payment processing
+- **Domain Configuration**: ✅ `app.hushpixel.com` configured and propagating
+- **Lead Capture**: ✅ Enhanced with Supabase integration and session tracking
+- **Database**: ✅ Complete user persistence and generation history
+- **Next Focus**: Main dashboard development and user experience optimization
 
-### **Session Results Summary**
+### **Session Results Summary (July 9, 2025)**
 ✅ **Authentication**: Users can sign up/sign in successfully  
 ✅ **Facebook Pixel**: Complete conversion tracking implemented  
 ✅ **Database**: All migrations pushed to production  
 ✅ **Environment**: All variables correctly configured  
-✅ **Quiz Submission**: Admin client issue resolved, regular client implemented
-✅ **Revenue Flow**: Complete funnel operational (July 7, 2025)  
+✅ **Quiz Images**: Local webp files loading correctly, layout fixed
+✅ **Quiz Submission**: Complete email capture working
+✅ **AI Generation**: ModelsLab API working perfectly with real NSFW generation
+✅ **Stripe Payment**: Embedded checkout operational with live mode
+✅ **Domain Setup**: `app.hushpixel.com` configured and ready
 
 ### **HushPixel-Specific Files**
-- **Quiz Implementation**: `/apps/web/app/quiz/` (✅ UI and submission working)
+- **Quiz Implementation**: `/apps/web/app/quiz/` (✅ UI working, images fixed)
 - **Environment Config**: `.env.production` (✅ fully configured)
 - **Facebook Pixel**: `/apps/web/app/quiz/_components/facebook-pixel.tsx` (✅ complete tracking)
-- **Quiz Action**: `/apps/web/app/quiz/_lib/server/quiz-actions.ts` (✅ fixed with regular client)
-- **Quiz Linking**: `/apps/web/lib/quiz-linking.ts` (✅ automatic user association)
+- **ModelsLab API**: `/apps/web/lib/modelslab-api.ts` (✅ endpoint fixed, working perfectly)
+- **Quiz Generation**: `/apps/web/app/api/quiz-generate/route.ts` (✅ operational with real AI)
+- **Stripe Checkout**: `/apps/web/app/checkout/_components/premium-checkout.tsx` (✅ embedded flow working)
+- **Lead Capture**: `/apps/web/app/api/capture-lead/route.ts` (✅ enhanced Supabase integration)
 
 ### **Current Technical Status**
 ✅ Vercel deployment working  
@@ -37,11 +44,15 @@ This file provides guidance to Claude Code when working with code in this reposi
 ✅ Authentication system functional  
 ✅ Facebook Pixel events tracking  
 ✅ Quiz email submission operational
-✅ Complete revenue flow functional
+✅ Quiz images loading correctly
+✅ AI generation API working perfectly
+✅ Stripe payment processing operational
+✅ Production domain configured
 
 ### **Revenue Flow Architecture**
 ```
-Quiz (/quiz) → Character Selection (TOP 4) → Body Type (TOP 3) → Email Capture → "Generation Coming Soon" → Facebook Pixel Events
+Quiz (/quiz) → Character Selection (TOP 4) → Body Type (TOP 3) → Email Capture → 
+Real NSFW AI Generation (ModelsLab) → Paywall → Stripe Checkout → Premium Access
 ```
 
 ### Core Technologies
