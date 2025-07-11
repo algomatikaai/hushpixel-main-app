@@ -387,7 +387,7 @@ function GenerationSuccess({ result, character, body, email }: {
     checkoutUrl.searchParams.set('intent', 'premium');
     checkoutUrl.searchParams.set('email', email);
     if (sessionId) {
-      checkoutUrl.searchParams.set('sessionId', sessionId);
+      checkoutUrl.searchParams.set('session', sessionId);
     }
     
     window.location.href = checkoutUrl.toString();

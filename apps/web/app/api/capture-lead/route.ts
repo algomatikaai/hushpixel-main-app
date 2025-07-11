@@ -43,14 +43,8 @@ export async function POST(request: NextRequest) {
           body_type: bodyType,
           source: source || 'quiz',
           created_at: new Date().toISOString(),
-          metadata: {
-            character,
-            body: bodyType,
-            session,
-            source,
-            userAgent: request.headers.get('user-agent'),
-            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
-          }
+          ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+          user_agent: request.headers.get('user-agent')
         })
         .select()
         .single();
