@@ -40,16 +40,33 @@ export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheck
     setIsLoading(true);
     
     try {
-      // For guest checkout, redirect to sign-up with checkout intent
-      if (isGuestCheckout && !userId) {
-        const signupUrl = new URL('/auth/sign-up', window.location.origin);
-        signupUrl.searchParams.set('next', '/checkout');
-        signupUrl.searchParams.set('plan', selectedPlan === 'monthly' ? 'premium-monthly' : 'premium-annual');
-        if (source) signupUrl.searchParams.set('source', source);
-        if (email) signupUrl.searchParams.set('email', email);
-        if (sessionId) signupUrl.searchParams.set('session', sessionId);
+      // Use guest checkout API for unauthenticated users
+      if (isGuestCheckout && !userId && email && sessionId) {
+        const response = await fetch('/api/billing/guest-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            planId: selectedPlan === 'monthly' ? 'premium-monthly' : 'premium-annual',
+            successUrl: `${window.location.origin}/home?welcome=premium`,
+            cancelUrl: window.location.href,
+            email,
+            sessionId,
+            source,
+            metadata: {
+              character_type: new URLSearchParams(window.location.search).get('character'),
+              body_type: new URLSearchParams(window.location.search).get('body')
+            }
+          })
+        });
+
+        const data = await response.json();
         
-        window.location.href = signupUrl.toString();
+        if (data.checkoutToken) {
+          // Show embedded checkout
+          setCheckoutToken(data.checkoutToken);
+        } else {
+          throw new Error(data.error || 'Failed to create checkout session');
+        }
         return;
       }
 
