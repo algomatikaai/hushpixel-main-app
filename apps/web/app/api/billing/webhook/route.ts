@@ -96,16 +96,17 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
       }
 
       // Check if user already exists
-      const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email);
+      const { data: existingUser } = await supabase.auth.admin.listUsers();
+      const userExists = existingUser.users.find(user => user.email === email);
       
-      if (existingUser.user) {
-        logger.info({ ...ctx, userId: existingUser.user.id }, 'User already exists, updating subscription account mapping...');
+      if (userExists) {
+        logger.info({ ...ctx, userId: userExists.id }, 'User already exists, updating subscription account mapping...');
         
         // Update subscription to point to existing user's account
         if ('target_subscription_id' in subscription) {
           const { error: updateError } = await supabase
             .from('subscriptions')
-            .update({ account_id: existingUser.user.id })
+            .update({ account_id: userExists.id })
             .eq('id', subscription.target_subscription_id);
 
           if (updateError) {
@@ -151,6 +152,23 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
         if (updateError) {
           logger.error({ ...ctx, error: updateError }, 'Failed to update subscription account mapping');
           throw updateError;
+        }
+      }
+
+      // Clean up temporary account if it exists
+      const tempAccountId = metadata.temp_account_id;
+      if (tempAccountId && tempAccountId !== newUser.user.id) {
+        logger.info({ ...ctx, tempAccountId }, 'Cleaning up temporary account after user creation');
+        
+        const { error: deleteError } = await supabase
+          .from('accounts')
+          .delete()
+          .eq('id', tempAccountId);
+
+        if (deleteError) {
+          logger.warn({ ...ctx, error: deleteError, tempAccountId }, 'Failed to delete temporary account (non-critical)');
+        } else {
+          logger.info({ ...ctx, tempAccountId }, 'Successfully cleaned up temporary account');
         }
       }
 

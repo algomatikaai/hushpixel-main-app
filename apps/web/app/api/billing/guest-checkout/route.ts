@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { enhanceRouteHandler } from '@kit/next/routes';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { createBillingGatewayService } from '@kit/billing-gateway';
 import { getLogger } from '@kit/shared/logger';
 import { z } from 'zod';
+import { randomUUID } from 'crypto';
 import billingConfig from '~/config/billing.config';
 
 const CreateGuestCheckoutSchema = z.object({
@@ -41,6 +43,39 @@ export const POST = enhanceRouteHandler(
     logger.info({ ...ctx, planId: body.planId, planName: selectedPlan.name }, 'Plan found successfully');
 
     try {
+      // Create temporary account for guest user (required for billing gateway UUID validation)
+      const supabase = getSupabaseServerAdminClient();
+      const temporaryAccountId = randomUUID();
+      const guestUserName = body.email.split('@')[0] || 'Guest User';
+      
+      logger.info({ ...ctx, temporaryAccountId, guestUserName }, 'Creating temporary account for guest checkout');
+      
+      const { data: tempAccount, error: createError } = await supabase
+        .from('accounts')
+        .insert({
+          id: temporaryAccountId,
+          primary_owner_user_id: temporaryAccountId, // Same as account ID for temporary account
+          name: guestUserName,
+          is_personal_account: true,
+          email: body.email
+        })
+        .select('id')
+        .single();
+        
+      if (createError || !tempAccount) {
+        logger.error({ 
+          ...ctx, 
+          createError,
+          temporaryAccountId
+        }, 'Failed to create temporary account for guest checkout');
+        return NextResponse.json({ 
+          error: 'Failed to setup guest checkout',
+          details: createError?.message || 'Could not create temporary account'
+        }, { status: 500 });
+      }
+      
+      logger.info({ ...ctx, accountId: tempAccount.id }, 'Successfully created temporary account for guest');
+
       const billingGateway = createBillingGatewayService('stripe');
       
       // Build variant quantities from line items
@@ -59,10 +94,9 @@ export const POST = enhanceRouteHandler(
         }
       }, 'Starting guest checkout session creation');
       
-      // Create checkout session for guest user
+      // Create checkout session for guest user with valid account ID
       const result = await billingGateway.createCheckoutSession({
-        // No accountId for guest checkout - will be created after payment
-        accountId: '', // Empty string instead of undefined to satisfy type
+        accountId: tempAccount.id, // ✅ Valid UUID from temporary account
         customerId: undefined, // Will be created if doesn't exist
         plan: selectedPlan,
         returnUrl: body.successUrl,
@@ -76,7 +110,9 @@ export const POST = enhanceRouteHandler(
           character_type: body.metadata?.character_type || 'unknown',
           body_type: body.metadata?.body_type || 'unknown',
           // Flag this as guest checkout
-          is_guest_checkout: 'true'
+          is_guest_checkout: 'true',
+          // Store temporary account ID for webhook processing
+          temp_account_id: tempAccount.id
         }
       });
 
