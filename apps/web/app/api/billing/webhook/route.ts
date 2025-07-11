@@ -155,21 +155,12 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
         }
       }
 
-      // Clean up temporary account if it exists
-      const tempAccountId = metadata.temp_account_id;
-      if (tempAccountId && tempAccountId !== newUser.user.id) {
-        logger.info({ ...ctx, tempAccountId }, 'Cleaning up temporary account after user creation');
-        
-        const { error: deleteError } = await supabase
-          .from('accounts')
-          .delete()
-          .eq('id', tempAccountId);
-
-        if (deleteError) {
-          logger.warn({ ...ctx, error: deleteError, tempAccountId }, 'Failed to delete temporary account (non-critical)');
-        } else {
-          logger.info({ ...ctx, tempAccountId }, 'Successfully cleaned up temporary account');
-        }
+      // Clean up temporary user if it exists
+      const tempUserId = metadata.temp_user_id;
+      const tempEmail = metadata.temp_email;
+      
+      if (tempUserId && tempUserId !== newUser.user.id) {
+        await cleanupTempUser(tempUserId, tempEmail, ctx, supabase);
       }
 
       // Update quiz response with user ID for tracking
@@ -195,5 +186,44 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
   } catch (error) {
     logger.error({ ...ctx, error }, 'Failed to process guest checkout completion');
     throw error;
+  }
+}
+
+/**
+ * Enhanced temp user cleanup function with comprehensive error handling
+ */
+async function cleanupTempUser(tempUserId: string, tempEmail: string | undefined, ctx: any, supabase: any) {
+  const logger = await getLogger();
+  
+  try {
+    logger.info({ 
+      ...ctx, 
+      tempUserId, 
+      tempEmail: tempEmail?.substring(0, 10) + '***' 
+    }, 'Starting temp user cleanup');
+    
+    // Delete temp user (cascades to account deletion via MakerKit)
+    const { error: deleteUserError } = await supabase.auth.admin.deleteUser(tempUserId);
+    
+    if (deleteUserError) {
+      logger.warn({ 
+        ...ctx, 
+        tempUserId, 
+        error: deleteUserError 
+      }, 'Failed to delete temp user via admin API');
+    } else {
+      logger.info({ 
+        ...ctx, 
+        tempUserId 
+      }, 'Temp user cleaned up successfully');
+    }
+    
+  } catch (error) {
+    // Log but don't fail - real user conversion is more important
+    logger.warn({ 
+      ...ctx, 
+      tempUserId, 
+      error: error instanceof Error ? error.message : error
+    }, 'Failed to cleanup temp user (non-critical)');
   }
 }
