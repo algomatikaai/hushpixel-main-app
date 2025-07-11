@@ -13,8 +13,8 @@ const CreateGuestCheckoutSchema = z.object({
   sessionId: z.string().min(1),
   source: z.string().default('quiz'),
   metadata: z.object({
-    character_type: z.string().optional(),
-    body_type: z.string().optional(),
+    character_type: z.string().optional().nullable(),
+    body_type: z.string().optional().nullable(),
   }).optional()
 });
 
@@ -73,8 +73,8 @@ export const POST = enhanceRouteHandler(
           email: body.email,
           session: body.sessionId, // Changed from sessionId to session for consistency
           planId: body.planId,
-          character_type: body.metadata?.character_type || '',
-          body_type: body.metadata?.body_type || '',
+          character_type: body.metadata?.character_type || 'unknown',
+          body_type: body.metadata?.body_type || 'unknown',
           // Flag this as guest checkout
           is_guest_checkout: 'true'
         }
