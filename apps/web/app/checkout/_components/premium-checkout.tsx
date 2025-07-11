@@ -22,6 +22,17 @@ export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheck
   const [timeLeft, setTimeLeft] = useState(23 * 60 + 47); // 23:47
   const [checkoutToken, setCheckoutToken] = useState<string | null>(null);
 
+  // Debug logging for premium checkout component
+  console.log('💰 PremiumCheckout Debug:', {
+    userId: userId || 'none',
+    email: email || 'missing',
+    source: source || 'missing', 
+    sessionId: sessionId || 'missing',
+    isGuestCheckout: !!isGuestCheckout,
+    guestCondition: isGuestCheckout && !userId && email && sessionId,
+    timestamp: new Date().toISOString()
+  });
+
   // Countdown timer for urgency
   useEffect(() => {
     const interval = setInterval(() => {
@@ -42,29 +53,38 @@ export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheck
     try {
       // Use guest checkout API for unauthenticated users
       if (isGuestCheckout && !userId && email && sessionId) {
+        console.log('🚀 Starting guest checkout API call...');
+        const guestCheckoutPayload = {
+          planId: selectedPlan === 'monthly' ? 'premium-monthly' : 'premium-annual',
+          successUrl: `${window.location.origin}/home?welcome=premium`,
+          cancelUrl: window.location.href,
+          email,
+          sessionId,
+          source,
+          metadata: {
+            character_type: new URLSearchParams(window.location.search).get('character'),
+            body_type: new URLSearchParams(window.location.search).get('body')
+          }
+        };
+        
+        console.log('📤 Guest checkout payload:', guestCheckoutPayload);
+        
         const response = await fetch('/api/billing/guest-checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            planId: selectedPlan === 'monthly' ? 'premium-monthly' : 'premium-annual',
-            successUrl: `${window.location.origin}/home?welcome=premium`,
-            cancelUrl: window.location.href,
-            email,
-            sessionId,
-            source,
-            metadata: {
-              character_type: new URLSearchParams(window.location.search).get('character'),
-              body_type: new URLSearchParams(window.location.search).get('body')
-            }
-          })
+          body: JSON.stringify(guestCheckoutPayload)
         });
 
+        console.log('📥 Guest checkout response status:', response.status);
         const data = await response.json();
+        console.log('📥 Guest checkout response data:', data);
         
         if (data.checkoutToken) {
+          console.log('✅ Guest checkout token received - showing Stripe checkout');
           // Show embedded checkout
           setCheckoutToken(data.checkoutToken);
         } else {
+          console.error('❌ Guest checkout failed:', data.error);
           throw new Error(data.error || 'Failed to create checkout session');
         }
         return;
