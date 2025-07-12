@@ -14,11 +14,9 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     const retrieveMagicLink = async () => {
       const sessionId = searchParams.get('session_id');
-      const email = searchParams.get('email') || '';
-
+      
       // 🔍 DEBUG: Log session details
-      console.log('🔍 Success page session ID:', sessionId);
-      console.log('🔍 Success page email:', email);
+      console.log('✅ Success page session ID:', sessionId);
       console.log('🔍 All URL params:', Object.fromEntries(searchParams.entries()));
 
       if (!sessionId) {
@@ -67,32 +65,13 @@ export default function PaymentSuccessPage() {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
-      // BULLETPROOF FALLBACK: Auto-send magic link after 15 seconds
+      // BULLETPROOF FALLBACK: After 15 seconds
       setStatus('fallback');
-
-      if (email) {
-        try {
-          // Automatically send magic link
-          const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-              emailRedirectTo: `${window.location.origin}/home?welcome=premium`
-            }
-          });
-
-          if (!error) {
-            router.push(`/auth/sign-in?message=magic-link-sent&email=${encodeURIComponent(email)}`);
-          } else {
-            console.warn('Failed to send magic link:', error);
-            router.push(`/auth/sign-in?message=payment-success&email=${encodeURIComponent(email)}`);
-          }
-        } catch (error) {
-          console.warn('Error sending fallback magic link:', error);
-          router.push(`/auth/sign-in?message=payment-success&email=${encodeURIComponent(email)}`);
-        }
-      } else {
-        router.push('/auth/sign-in?message=payment-success');
-      }
+      
+      // Since we no longer pass email in URL, just redirect to sign-in
+      // The webhook has already created the user with email, so they can sign in
+      console.log('⏱️ Polling timeout - redirecting to sign-in page');
+      router.push('/auth/sign-in?message=payment-success');
     };
 
     // Start polling immediately (no artificial delay needed)

@@ -14,7 +14,7 @@ export const POST = enhanceRouteHandler(
     const supabase = getSupabaseServerAdminClient();
 
     const ctx = { name: 'payment-success', sessionId: body.sessionId };
-    logger.info(ctx, 'Looking up magic link for payment success');
+    logger.info(ctx, '🔍 Looking up magic link for payment success with clean session ID');
 
     try {
       // Find user by Stripe session ID with proper filtering
