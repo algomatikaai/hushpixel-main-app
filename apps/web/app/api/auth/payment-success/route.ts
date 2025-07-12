@@ -23,6 +23,21 @@ export const POST = enhanceRouteHandler(
         perPage: 1000 // Reasonable limit
       });
 
+      // 🔍 DEBUG: Log all users and their session IDs
+      const userSessionDebug = users.users.map(u => ({
+        email: u.email?.substring(0, 10) + '***',
+        stripe_session_id: u.user_metadata?.stripe_session_id,
+        has_magic_link: !!u.user_metadata?.magic_link_token,
+        magic_link_created: u.user_metadata?.magic_link_created_at,
+        created_at: u.created_at
+      })).slice(0, 10); // Only log recent users
+
+      logger.info({ 
+        ...ctx, 
+        lookingFor: body.sessionId,
+        recentUsers: userSessionDebug 
+      }, 'DEBUG: Session ID lookup');
+
       const user = users.users.find(u => {
         const sessionMatch = u.user_metadata?.stripe_session_id === body.sessionId;
         const hasValidMagicLink = u.user_metadata?.magic_link_token;
@@ -30,6 +45,19 @@ export const POST = enhanceRouteHandler(
         // Check if magic link is recent (created within last 5 minutes)
         const isRecent = u.user_metadata?.magic_link_created_at &&
           (Date.now() - new Date(u.user_metadata.magic_link_created_at).getTime()) < 300000; // 5 minutes
+
+        // 🔍 DEBUG: Log match details for this user
+        if (u.user_metadata?.stripe_session_id) {
+          logger.info({
+            ...ctx,
+            userEmail: u.email?.substring(0, 5) + '***',
+            storedSessionId: u.user_metadata.stripe_session_id,
+            searchSessionId: body.sessionId,
+            sessionMatch,
+            hasValidMagicLink,
+            isRecent
+          }, 'DEBUG: User session match check');
+        }
 
         return sessionMatch && hasValidMagicLink && isRecent;
       });

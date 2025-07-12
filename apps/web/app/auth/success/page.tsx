@@ -16,8 +16,14 @@ export default function PaymentSuccessPage() {
       const sessionId = searchParams.get('session_id');
       const email = searchParams.get('email') || '';
 
+      // 🔍 DEBUG: Log session details
+      console.log('🔍 Success page session ID:', sessionId);
+      console.log('🔍 Success page email:', email);
+      console.log('🔍 All URL params:', Object.fromEntries(searchParams.entries()));
+
       if (!sessionId) {
         // No session ID, fallback immediately
+        console.log('❌ No session ID found in URL, falling back to sign-in');
         setStatus('fallback');
         router.push('/auth/sign-in?message=payment-success');
         return;
@@ -28,23 +34,33 @@ export default function PaymentSuccessPage() {
         setAttempts(attempt);
 
         try {
+          console.log(`🔍 Polling attempt ${attempt}/15 for session ID: ${sessionId}`);
+          
           const response = await fetch('/api/auth/payment-success', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId })
           });
 
+          const responseData = await response.json();
+          console.log(`🔍 API response status: ${response.status}`, responseData);
+
           if (response.ok) {
-            const { magicLinkToken } = await response.json();
+            const { magicLinkToken } = responseData;
             if (magicLinkToken) {
+              console.log('✅ Magic link found! Redirecting to:', magicLinkToken);
               setStatus('success');
               // Auto sign-in with magic link - ZERO FRICTION!
               window.location.href = magicLinkToken;
               return;
+            } else {
+              console.log('⚠️ API response OK but no magic link token found');
             }
+          } else {
+            console.log(`❌ API returned ${response.status}:`, responseData);
           }
         } catch (error) {
-          console.warn(`Attempt ${attempt} failed:`, error);
+          console.warn(`❌ Attempt ${attempt} failed:`, error);
         }
 
         // Wait 1 second between attempts

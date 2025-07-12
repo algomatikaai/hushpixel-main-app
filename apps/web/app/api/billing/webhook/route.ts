@@ -30,11 +30,20 @@ export const POST = enhanceRouteHandler(
       getPlanTypesMap(billingConfig),
     );
 
+    // Parse the webhook event to extract session ID
+    const body = await request.clone().text();
+    const event = JSON.parse(body);
+    
     try {
       await service.handleWebhookEvent(request, {
         onCheckoutSessionCompleted: async (subscription, customerId) => {
+          // Extract session ID from the original event
+          const sessionId = event.type === 'checkout.session.completed' 
+            ? event.data.object.id 
+            : null;
+          
           // Custom handler for guest checkout completion
-          await handleGuestCheckoutCompletion(subscription, customerId);
+          await handleGuestCheckoutCompletion(subscription, customerId, sessionId);
         },
       });
 
@@ -57,7 +66,7 @@ export const POST = enhanceRouteHandler(
 /**
  * Handle guest checkout completion - create user accounts for quiz users who paid
  */
-async function handleGuestCheckoutCompletion(subscription: any, customerId: string) {
+async function handleGuestCheckoutCompletion(subscription: any, customerId: string, sessionId?: string) {
   const logger = await getLogger();
   const supabase = getSupabaseServerAdminClient();
   
@@ -76,7 +85,16 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
     const source = metadata.source;
     const email = metadata.email;
 
-    logger.info({ ...ctx, sessionId, source, email: email?.substring(0, 3) + '***' }, 'Checkout metadata extracted');
+    // 🔍 DEBUG: Log all subscription data to find session ID
+    logger.info({ 
+      ...ctx, 
+      sessionId, 
+      source, 
+      email: email?.substring(0, 3) + '***',
+      subscriptionId: subscription.id,
+      latestInvoice: subscription.latest_invoice,
+      fullSubscription: JSON.stringify(subscription, null, 2)
+    }, 'DEBUG: Full subscription object analysis');
 
     // If this looks like a guest checkout from quiz
     if (source === 'quiz' && sessionId && email) {
@@ -113,11 +131,18 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
 
         if (!magicLinkError && magicLink) {
           // Update user metadata with magic link
+          // Use the actual Stripe checkout session ID passed from the handler
+          const checkoutSessionId = sessionId || 
+                                   subscription.metadata?.checkout_session_id || 
+                                   subscription.latest_invoice || 
+                                   subscription.id;
+          
           await supabase.auth.admin.updateUserById(userExists.id, {
             user_metadata: {
               ...userExists.user_metadata,
               magic_link_token: magicLink.properties.action_link,
-              stripe_session_id: subscription.latest_invoice || subscription.id,
+              stripe_session_id: checkoutSessionId,
+              stripe_subscription_id: subscription.id, // Also store subscription ID for reference
               magic_link_created_at: new Date().toISOString()
             }
           });
@@ -178,11 +203,18 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
 
       if (!magicLinkError && magicLink) {
         // Store magic link + session ID for success page lookup
+        // Use the actual Stripe checkout session ID passed from the handler
+        const checkoutSessionId = sessionId || 
+                                 subscription.metadata?.checkout_session_id || 
+                                 subscription.latest_invoice || 
+                                 subscription.id;
+        
         await supabase.auth.admin.updateUserById(newUser.user.id, {
           user_metadata: {
             ...newUser.user.user_metadata,
             magic_link_token: magicLink.properties.action_link,
-            stripe_session_id: subscription.latest_invoice || subscription.id,
+            stripe_session_id: checkoutSessionId,
+            stripe_subscription_id: subscription.id, // Also store subscription ID for reference
             magic_link_created_at: new Date().toISOString()
           }
         });
