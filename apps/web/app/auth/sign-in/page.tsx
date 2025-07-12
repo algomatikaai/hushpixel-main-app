@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 
 import { SignInMethodsContainer } from '@kit/auth/sign-in';
 import { Button } from '@kit/ui/button';
@@ -10,10 +11,14 @@ import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
+import { PaymentSuccessHandler } from './_components/payment-success-handler';
+
 interface SignInPageProps {
   searchParams: Promise<{
     invite_token?: string;
     next?: string;
+    message?: string;
+    email?: string;
   }>;
 }
 
@@ -49,6 +54,10 @@ async function SignInPage({ searchParams }: SignInPageProps) {
           <Trans i18nKey={'auth:signInSubheading'} />
         </p>
       </div>
+
+      <Suspense fallback={null}>
+        <PaymentSuccessHandler />
+      </Suspense>
 
       <SignInMethodsContainer
         inviteToken={inviteToken}

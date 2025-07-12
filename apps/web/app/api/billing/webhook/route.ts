@@ -95,12 +95,37 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
         // Continue anyway - we can still create the user
       }
 
-      // Check if user already exists
+      // Check if user already exists (handle duplicate webhooks)
       const { data: existingUser } = await supabase.auth.admin.listUsers();
       const userExists = existingUser.users.find(user => user.email === email);
       
       if (userExists) {
-        logger.info({ ...ctx, userId: userExists.id }, 'User already exists, updating subscription account mapping...');
+        logger.info({ ...ctx, userId: userExists.id }, 'User already exists, updating subscription and generating magic link...');
+        
+        // Generate magic link for existing user
+        const { data: magicLink, error: magicLinkError } = await supabase.auth.admin.generateLink({
+          type: 'magiclink',
+          email: userExists.email,
+          options: {
+            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/home?welcome=premium`
+          }
+        });
+
+        if (!magicLinkError && magicLink) {
+          // Update user metadata with magic link
+          await supabase.auth.admin.updateUserById(userExists.id, {
+            user_metadata: {
+              ...userExists.user_metadata,
+              magic_link_token: magicLink.properties.action_link,
+              stripe_session_id: subscription.latest_invoice || subscription.id,
+              magic_link_created_at: new Date().toISOString()
+            }
+          });
+          
+          logger.info({ ...ctx, userId: userExists.id }, 'Magic link generated for existing user');
+        } else {
+          logger.warn({ ...ctx, error: magicLinkError }, 'Failed to generate magic link for existing user');
+        }
         
         // Update subscription to point to existing user's account
         if ('target_subscription_id' in subscription) {
@@ -141,6 +166,31 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
       }
 
       logger.info({ ...ctx, userId: newUser.user.id }, 'Successfully created user account');
+
+      // Generate magic link for automatic sign-in
+      const { data: magicLink, error: magicLinkError } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: newUser.user.email,
+        options: {
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/home?welcome=premium`
+        }
+      });
+
+      if (!magicLinkError && magicLink) {
+        // Store magic link + session ID for success page lookup
+        await supabase.auth.admin.updateUserById(newUser.user.id, {
+          user_metadata: {
+            ...newUser.user.user_metadata,
+            magic_link_token: magicLink.properties.action_link,
+            stripe_session_id: subscription.latest_invoice || subscription.id,
+            magic_link_created_at: new Date().toISOString()
+          }
+        });
+        
+        logger.info({ ...ctx, userId: newUser.user.id }, 'Magic link generated for new user');
+      } else {
+        logger.warn({ ...ctx, error: magicLinkError }, 'Failed to generate magic link for new user');
+      }
 
       // Update subscription to point to new user's account (the account is created automatically by trigger)
       if ('target_subscription_id' in subscription) {
