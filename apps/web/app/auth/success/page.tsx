@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 
 export default function PaymentSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClientComponentClient();
+  const supabase = useSupabase();
   const [attempts, setAttempts] = useState(0);
   const [status, setStatus] = useState<'loading' | 'fallback' | 'success'>('loading');
 
