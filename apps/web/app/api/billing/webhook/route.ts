@@ -81,30 +81,31 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
   try {
     // Check if this is a guest checkout by looking for quiz session in metadata
     const metadata = subscription.metadata || {};
-    const sessionId = metadata.session || metadata.sessionId;
+    const quizSessionId = metadata.session || metadata.sessionId;
     const source = metadata.source;
     const email = metadata.email;
 
     // 🔍 DEBUG: Log all subscription data to find session ID
     logger.info({ 
       ...ctx, 
-      sessionId, 
+      stripeSessionId: sessionId, // The Stripe checkout session ID from webhook parameter
+      quizSessionId, // The quiz session ID from metadata
       source, 
       email: email?.substring(0, 3) + '***',
       subscriptionId: subscription.id,
       latestInvoice: subscription.latest_invoice,
       fullSubscription: JSON.stringify(subscription, null, 2)
-    }, 'DEBUG: Full subscription object analysis');
+    }, 'DEBUG: Full subscription object analysis - FIXED VARIABLE COLLISION');
 
     // If this looks like a guest checkout from quiz
-    if (source === 'quiz' && sessionId && email) {
-      logger.info({ ...ctx, sessionId }, 'Detected guest checkout from quiz, creating user account...');
+    if (source === 'quiz' && quizSessionId && email) {
+      logger.info({ ...ctx, stripeSessionId: sessionId, quizSessionId }, 'Detected guest checkout from quiz, creating user account...');
 
       // Get quiz responses for context
       const { data: quizResponse, error: quizError } = await supabase
         .from('quiz_responses')
         .select('*')
-        .eq('session_id', sessionId)
+        .eq('session_id', quizSessionId)
         .eq('email', email)
         .single();
 
@@ -137,6 +138,14 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
                                    subscription.latest_invoice || 
                                    subscription.id;
           
+          logger.info({ 
+            ...ctx, 
+            userId: userExists.id,
+            stripeSessionId: sessionId,
+            checkoutSessionId,
+            magicLinkToken: magicLink.properties.action_link?.substring(0, 50) + '...'
+          }, '🎯 STORING MAGIC LINK WITH CORRECT STRIPE SESSION ID (existing user)');
+          
           await supabase.auth.admin.updateUserById(userExists.id, {
             user_metadata: {
               ...userExists.user_metadata,
@@ -147,7 +156,7 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
             }
           });
           
-          logger.info({ ...ctx, userId: userExists.id }, 'Magic link generated for existing user');
+          logger.info({ ...ctx, userId: userExists.id, checkoutSessionId }, '✅ Magic link generated for existing user with CORRECT session ID');
         } else {
           logger.warn({ ...ctx, error: magicLinkError }, 'Failed to generate magic link for existing user');
         }
@@ -181,7 +190,7 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
           source: 'quiz_checkout',
           character_type: quizResponse?.character_type,
           body_type: quizResponse?.body_type,
-          session_id: sessionId,
+          session_id: quizSessionId, // Use quiz session ID for tracking
         }
       });
 
@@ -209,6 +218,14 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
                                  subscription.latest_invoice || 
                                  subscription.id;
         
+        logger.info({ 
+          ...ctx, 
+          userId: newUser.user.id,
+          stripeSessionId: sessionId,
+          checkoutSessionId,
+          magicLinkToken: magicLink.properties.action_link?.substring(0, 50) + '...'
+        }, '🎯 STORING MAGIC LINK WITH CORRECT STRIPE SESSION ID (new user)');
+        
         await supabase.auth.admin.updateUserById(newUser.user.id, {
           user_metadata: {
             ...newUser.user.user_metadata,
@@ -219,7 +236,7 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
           }
         });
         
-        logger.info({ ...ctx, userId: newUser.user.id }, 'Magic link generated for new user');
+        logger.info({ ...ctx, userId: newUser.user.id, checkoutSessionId }, '✅ Magic link generated for new user with CORRECT session ID');
       } else {
         logger.warn({ ...ctx, error: magicLinkError }, 'Failed to generate magic link for new user');
       }
