@@ -84,6 +84,35 @@ export const POST = enhanceRouteHandler(
 );
 
 /**
+ * Health check endpoint to verify webhook URL is accessible
+ */
+export const GET = enhanceRouteHandler(
+  async () => {
+    const logger = await getLogger();
+    
+    logger.info({ 
+      name: 'webhook-health-check',
+      timestamp: new Date().toISOString(),
+      endpoint: '/api/billing/webhook'
+    }, '🟢 Webhook health check endpoint accessed via GET');
+
+    return new Response(JSON.stringify({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      endpoint: '/api/billing/webhook',
+      message: 'Webhook endpoint is accessible and logging is working',
+      deploymentId: process.env.VERCEL_DEPLOYMENT_ID || 'local'
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  },
+  {
+    auth: false,
+  },
+);
+
+/**
  * Handle guest checkout completion - create user accounts for quiz users who paid
  */
 async function handleGuestCheckoutCompletion(subscription: any, customerId: string, sessionId?: string) {
