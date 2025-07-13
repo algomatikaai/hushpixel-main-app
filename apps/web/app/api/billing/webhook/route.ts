@@ -20,6 +20,21 @@ export const POST = enhanceRouteHandler(
       provider,
     };
 
+    // Parse the webhook event to extract session ID
+    const body = await request.clone().text();
+    const event = JSON.parse(body);
+
+    // 🚨 CRITICAL DEBUG: Log ALL webhook events to verify they're firing
+    logger.info({
+      ...ctx,
+      eventType: event.type,
+      eventId: event.id,
+      objectId: event.data?.object?.id,
+      objectType: event.data?.object?.object,
+      isCheckoutSessionCompleted: event.type === 'checkout.session.completed',
+      timestamp: new Date().toISOString()
+    }, `🚨 WEBHOOK RECEIVED - TYPE: ${event.type}`);
+
     logger.info(ctx, `Received billing webhook. Processing...`);
 
     const supabaseClientProvider = () => getSupabaseServerAdminClient();
@@ -29,10 +44,6 @@ export const POST = enhanceRouteHandler(
       provider,
       getPlanTypesMap(billingConfig),
     );
-
-    // Parse the webhook event to extract session ID
-    const body = await request.clone().text();
-    const event = JSON.parse(body);
     
     try {
       await service.handleWebhookEvent(request, {
@@ -41,6 +52,15 @@ export const POST = enhanceRouteHandler(
           const sessionId = event.type === 'checkout.session.completed' 
             ? event.data.object.id 
             : null;
+          
+          logger.info({
+            ...ctx,
+            sessionId,
+            customerId,
+            subscriptionId: subscription.id,
+            eventType: event.type,
+            objectId: event.data?.object?.id
+          }, '🎯 CHECKOUT SESSION COMPLETED - Calling handleGuestCheckoutCompletion with FIXED variables');
           
           // Custom handler for guest checkout completion
           await handleGuestCheckoutCompletion(subscription, customerId, sessionId);

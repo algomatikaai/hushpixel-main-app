@@ -161,8 +161,19 @@ export const POST = enhanceRouteHandler(
         tempEmail,
         accountId: account.id,
         guestEmail: body.email,
-        checkoutToken: result.checkoutToken ? 'created' : 'missing'
-      }, 'Guest checkout completed successfully');
+        checkoutToken: result.checkoutToken ? 'created' : 'missing',
+        metadataPassedToStripe: {
+          source: body.source,
+          email: body.email,
+          session: body.sessionId,
+          planId: body.planId,
+          character_type: body.metadata?.character_type || 'unknown',
+          body_type: body.metadata?.body_type || 'unknown',
+          is_guest_checkout: 'true',
+          temp_user_id: tempUser.data.user.id,
+          temp_email: tempEmail
+        }
+      }, '🚨 GUEST CHECKOUT COMPLETED - Metadata sent to Stripe for webhook processing');
 
       return NextResponse.json({
         success: true,
