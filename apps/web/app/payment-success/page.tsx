@@ -15,42 +15,65 @@ export default function PaymentSuccessPage() {
   const sessionId = searchParams.get('session_id');
   const [displayEmail, setDisplayEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [autoLoginStatus, setAutoLoginStatus] = useState<'attempting' | 'success' | 'failed' | null>(null);
+  const [autoLoginError, setAutoLoginError] = useState<string | null>(null);
 
-  // Fetch session details to get email from metadata
+  // Auto-login flow
   useEffect(() => {
-    const fetchSessionDetails = async () => {
+    const autoLogin = async () => {
       if (!sessionId) {
         setLoading(false);
         return;
       }
 
+      // Clean the session ID first
+      const cleanSessionId = sessionId.split('?')[0];
+      
       try {
-        const response = await fetch(`/api/billing/session-details?session_id=${sessionId}`);
-        const data = await response.json();
+        // First fetch session details
+        const detailsResponse = await fetch(`/api/billing/session-details?session_id=${cleanSessionId}`);
+        const detailsData = await detailsResponse.json();
         
-        if (data.success && data.email) {
-          setDisplayEmail(data.email);
+        if (detailsData.success && detailsData.email) {
+          setDisplayEmail(detailsData.email);
+        }
+        
+        // Wait a moment for webhook to process
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Attempt auto-login
+        setAutoLoginStatus('attempting');
+        const loginResponse = await fetch('/api/auth/auto-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: cleanSessionId })
+        });
+        
+        const loginData = await loginResponse.json();
+        
+        if (loginResponse.ok && loginData.success) {
+          setAutoLoginStatus('success');
+          // Give Supabase a moment to set cookies
+          await new Promise(resolve => setTimeout(resolve, 500));
+          // Redirect to dashboard
+          window.location.href = '/home?welcome=premium';
+        } else {
+          setAutoLoginStatus('failed');
+          setAutoLoginError(loginData.error || 'Auto-login failed');
         }
       } catch (error) {
-        console.error('Failed to fetch session details:', error);
+        console.error('Auto-login error:', error);
+        setAutoLoginStatus('failed');
+        setAutoLoginError('Network error during auto-login');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSessionDetails();
+    autoLogin();
   }, [sessionId]);
   
-  // Check authentication status
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        router.push('/home?welcome=premium');
-      }
-    };
-    checkAuth();
-  }, [router, supabase]);
+  // Remove the old auth check - we're handling it in auto-login now
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -71,11 +94,32 @@ export default function PaymentSuccessPage() {
             </p>
           </div>
           
-          {loading ? (
-            <div className="bg-muted/50 rounded-lg p-4 flex items-center justify-center">
-              <Spinner className="h-5 w-5 mr-2" />
-              <span className="text-sm text-muted-foreground">Loading payment details...</span>
+          {loading || autoLoginStatus === 'attempting' ? (
+            <div className="bg-muted/50 rounded-lg p-4 flex flex-col items-center justify-center space-y-2">
+              <div className="flex items-center">
+                <Spinner className="h-5 w-5 mr-2" />
+                <span className="text-sm text-muted-foreground">
+                  {autoLoginStatus === 'attempting' ? 'Logging you in automatically...' : 'Processing payment...'}
+                </span>
+              </div>
+              {autoLoginStatus === 'attempting' && (
+                <p className="text-xs text-muted-foreground">You'll be redirected to your dashboard shortly</p>
+              )}
             </div>
+          ) : autoLoginStatus === 'failed' ? (
+            <>
+              {displayEmail && (
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground mb-2">Your email:</p>
+                  <p className="font-medium">{displayEmail}</p>
+                </div>
+              )}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-sm text-amber-800">
+                  Auto-login is processing. Click below to complete sign-in:
+                </p>
+              </div>
+            </>
           ) : displayEmail ? (
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-sm text-muted-foreground mb-2">Your email:</p>
@@ -83,24 +127,30 @@ export default function PaymentSuccessPage() {
             </div>
           ) : null}
 
-          <Button 
-            onClick={() => {
-              const signInUrl = displayEmail 
-                ? `/auth/sign-in?email=${encodeURIComponent(displayEmail)}&next=/home?welcome=premium&message=payment-success`
-                : '/auth/sign-in?next=/home?welcome=premium&message=payment-success';
-              router.push(signInUrl);
-            }}
-            className="w-full"
-            size="lg"
-          >
-            Sign In to Access Premium
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          {autoLoginStatus === 'failed' && (
+            <Button 
+              onClick={() => {
+                const signInUrl = displayEmail 
+                  ? `/auth/sign-in?email=${encodeURIComponent(displayEmail)}&next=/home?welcome=premium&message=payment-success`
+                  : '/auth/sign-in?next=/home?welcome=premium&message=payment-success';
+                router.push(signInUrl);
+              }}
+              className="w-full"
+              size="lg"
+            >
+              Complete Sign In
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
 
-          <div className="space-y-2 text-xs text-muted-foreground text-center">
-            <p>Your account has been created and payment confirmed.</p>
-            <p>Check your email for a sign-in link, or sign in with your email above.</p>
-          </div>
+          {autoLoginStatus !== 'attempting' && (
+            <div className="space-y-2 text-xs text-muted-foreground text-center">
+              <p>Your account has been created and payment confirmed.</p>
+              {autoLoginStatus === 'failed' && (
+                <p>Check your email for a sign-in link, or click the button above.</p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
