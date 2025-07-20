@@ -137,7 +137,7 @@ export const POST = enhanceRouteHandler(
         accountId: account.id, // ✅ Valid UUID from MakerKit auto-created account
         customerId: undefined, // Will be created if doesn't exist
         plan: selectedPlan,
-        returnUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/success`,
+        returnUrl: body.successUrl,
         variantQuantities,
         metadata: {
           // Critical metadata for post-payment user creation
