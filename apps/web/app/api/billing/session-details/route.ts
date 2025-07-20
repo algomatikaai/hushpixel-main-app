@@ -9,19 +9,27 @@ import { getLogger } from '@kit/shared/logger';
 export async function GET(request: Request) {
   const logger = await getLogger();
   const { searchParams } = new URL(request.url);
-  const sessionId = searchParams.get('session_id');
+  const rawSessionId = searchParams.get('session_id');
 
-  if (!sessionId) {
+  if (!rawSessionId) {
     return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
   }
 
-  const ctx = { name: 'billing.session-details', sessionId };
+  // Clean corrupted session ID (remove duplicate URL parameters)
+  const cleanSessionId = rawSessionId.split('?')[0];
+  
+  const ctx = { 
+    name: 'billing.session-details', 
+    rawSessionId,
+    cleanSessionId,
+    sessionId: cleanSessionId 
+  };
 
   try {
     logger.info(ctx, 'Retrieving session details');
     
     const billingGateway = createBillingGatewayService('stripe');
-    const session = await billingGateway.retrieveCheckoutSession(sessionId);
+    const session = await billingGateway.retrieveCheckoutSession(cleanSessionId);
 
     if (!session) {
       logger.error(ctx, 'Session not found');
