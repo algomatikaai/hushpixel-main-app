@@ -64,7 +64,7 @@ export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheck
         console.log('🚀 Starting guest checkout API call...');
         const guestCheckoutPayload = {
           planId: selectedPlan === 'monthly' ? 'premium-monthly' : 'premium-annual',
-          successUrl: `${window.location.origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&email=${encodeURIComponent(email || '')}`,
+          successUrl: `${window.location.origin}/payment-success?email=${encodeURIComponent(email || '')}&session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: window.location.href,
           email,
           sessionId,
@@ -104,7 +104,7 @@ export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheck
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           planId: selectedPlan === 'monthly' ? 'premium-monthly' : 'premium-annual',
-          successUrl: `${window.location.origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&email=${encodeURIComponent(email || '')}`,
+          successUrl: `${window.location.origin}/payment-success?email=${encodeURIComponent(email || '')}&session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: window.location.href,
           metadata: {
             source,
