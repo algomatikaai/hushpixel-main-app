@@ -31,7 +31,7 @@ export const generateMetadata = async () => {
 };
 
 async function SignInPage({ searchParams }: SignInPageProps) {
-  const { invite_token: inviteToken, next } = await searchParams;
+  const { invite_token: inviteToken, next, email } = await searchParams;
 
   const signUpPath =
     pathsConfig.auth.signUp +

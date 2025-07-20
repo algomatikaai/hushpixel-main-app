@@ -6,7 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Badge } from '@kit/ui/badge';
 import { Check, Crown, Sparkles, Shield, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-import { StripeCheckout } from '@kit/stripe/components';
+import dynamic from 'next/dynamic';
+
+const EmbeddedCheckout = dynamic(
+  async () => {
+    const { EmbeddedCheckout } = await import('@kit/billing-gateway/checkout');
+    return { default: EmbeddedCheckout };
+  },
+  { ssr: false }
+);
 
 interface PremiumCheckoutProps {
   userId?: string | null;
@@ -56,7 +64,7 @@ export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheck
         console.log('🚀 Starting guest checkout API call...');
         const guestCheckoutPayload = {
           planId: selectedPlan === 'monthly' ? 'premium-monthly' : 'premium-annual',
-          successUrl: `${window.location.origin}/home?welcome=premium`,
+          successUrl: `${window.location.origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&email=${encodeURIComponent(email || '')}`,
           cancelUrl: window.location.href,
           email,
           sessionId,
@@ -96,7 +104,7 @@ export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheck
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           planId: selectedPlan === 'monthly' ? 'premium-monthly' : 'premium-annual',
-          successUrl: `${window.location.origin}/home?welcome=premium`,
+          successUrl: `${window.location.origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&email=${encodeURIComponent(email || '')}`,
           cancelUrl: window.location.href,
           metadata: {
             source,
@@ -304,8 +312,9 @@ export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheck
       
       {/* Embedded Checkout */}
       {checkoutToken && (
-        <StripeCheckout
+        <EmbeddedCheckout
           checkoutToken={checkoutToken}
+          provider={"stripe"}
           onClose={() => setCheckoutToken(null)}
         />
       )}
