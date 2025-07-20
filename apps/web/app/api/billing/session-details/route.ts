@@ -29,23 +29,22 @@ export async function GET(request: Request) {
     logger.info(ctx, 'Retrieving session details');
     
     const billingGateway = createBillingGatewayService('stripe');
-    const session = await billingGateway.retrieveCheckoutSession(cleanSessionId);
+    const sessionData = await billingGateway.retrieveCheckoutSession({ sessionId: cleanSessionId });
 
-    if (!session) {
+    if (!sessionData) {
       logger.error(ctx, 'Session not found');
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Extract email from metadata or customer details
-    const email = session.metadata?.email || session.customer_details?.email || null;
+    // Extract email from customer details (this is where Stripe stores it)
+    const email = sessionData.customer?.email || null;
 
     logger.info({ ...ctx, email: email ? email.substring(0, 3) + '***' : 'none' }, 'Session retrieved successfully');
 
     return NextResponse.json({
       success: true,
       email,
-      metadata: session.metadata,
-      customerDetails: session.customer_details
+      sessionData
     });
   } catch (error) {
     logger.error({ ...ctx, error }, 'Failed to retrieve session details');
