@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getLogger } from '@kit/shared/logger';
 
 const LeadCaptureSchema = z.object({
@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
     
     const { email, character, body: bodyType, session, source } = LeadCaptureSchema.parse(body);
     
-    const supabase = getSupabaseServerClient();
+    // Use admin client to bypass RLS for anonymous lead capture
+    const supabase = getSupabaseServerAdminClient();
     
     // Check if lead already exists for this session
     const { data: existingLead } = await supabase

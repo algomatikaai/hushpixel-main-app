@@ -16,8 +16,9 @@ interface CheckoutPageProps {
 }
 
 export default async function CheckoutPage({ searchParams }: CheckoutPageProps) {
-  const params = await searchParams;
-  const { plan, source, intent, email, session } = params;
+  try {
+    const params = await searchParams;
+    const { plan, source, intent, email, session } = params;
   
   // Check if user is authenticated
   const supabase = getSupabaseServerClient();
@@ -94,4 +95,17 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
       </div>
     </div>
   );
+  } catch (error) {
+    console.error('Checkout page error:', error);
+    // Return a simple error page
+    return (
+      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
+          <p className="text-muted-foreground mb-4">Please try again or contact support.</p>
+          <a href="/quiz" className="text-primary hover:underline">Go back to quiz</a>
+        </div>
+      </div>
+    );
+  }
 }
