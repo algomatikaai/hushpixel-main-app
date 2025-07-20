@@ -1,18 +1,45 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { CheckCircle, ArrowRight } from 'lucide-react';
+import { Spinner } from '@kit/ui/spinner';
 
 export default function PaymentSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = useSupabase();
-  const email = searchParams.get('email');
   const sessionId = searchParams.get('session_id');
+  const [displayEmail, setDisplayEmail] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch session details to get email from metadata
+  useEffect(() => {
+    const fetchSessionDetails = async () => {
+      if (!sessionId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/billing/session-details?session_id=${sessionId}`);
+        const data = await response.json();
+        
+        if (data.success && data.email) {
+          setDisplayEmail(data.email);
+        }
+      } catch (error) {
+        console.error('Failed to fetch session details:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSessionDetails();
+  }, [sessionId]);
   
   // Check authentication status
   useEffect(() => {
@@ -24,8 +51,6 @@ export default function PaymentSuccessPage() {
     };
     checkAuth();
   }, [router, supabase]);
-
-  const displayEmail = email ? decodeURIComponent(email) : null;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -46,12 +71,17 @@ export default function PaymentSuccessPage() {
             </p>
           </div>
           
-          {displayEmail && (
+          {loading ? (
+            <div className="bg-muted/50 rounded-lg p-4 flex items-center justify-center">
+              <Spinner className="h-5 w-5 mr-2" />
+              <span className="text-sm text-muted-foreground">Loading payment details...</span>
+            </div>
+          ) : displayEmail ? (
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-sm text-muted-foreground mb-2">Your email:</p>
               <p className="font-medium">{displayEmail}</p>
             </div>
-          )}
+          ) : null}
 
           <Button 
             onClick={() => {
