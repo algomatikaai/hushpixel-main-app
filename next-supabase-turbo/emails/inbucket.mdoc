@@ -1,0 +1,104 @@
+---
+status: "published"
+title: "InBucket for local development in the Next.js Supabase Starter Kit"
+label: "Local Development"
+description: "Learn how to use InBucket/Mailpit for local development in the Next.js Supabase Starter Kit."
+order: 4
+---
+
+{% sequence title="Steps to use InBucket/Mailpit" description="Learn how to use InBucket/Mailpit for local development in the Next.js Supabase Starter Kit." %}
+
+[What is Mailpit?](#what-is-mailpit)
+
+[Accessing Mailpit](#accessing-mailpit)
+
+[Common Use Cases](#common-use-cases)
+
+[Production Emails](#mailpit-vs-production-emails)
+
+{% /sequence %}
+
+When developing locally, Supabase uses [InBucket](https://www.inbucket.org/) and [Mailpit](https://mailpit.axllent.org) (depending on which version you're running) to capture emails sent during development. This allows you to test email functionality without actually sending emails to real addresses.
+
+Makerkit also uses InBucket/Mailpit for sending non-authentication emails, such as team invitations and account deletion confirmations.
+
+## What is Mailpit?
+
+Mailpit is a disposable email service that captures all emails sent during local development. It's particularly useful for testing:
+
+- Email verification flows
+- Password reset emails
+- Team invitations
+- Notification emails
+- Any other transactional emails
+
+## Accessing Mailpit
+
+When running Supabase locally, Mailpit is automatically available at:
+
+```bash
+http://localhost:54324
+```
+
+You can view any captured emails by:
+
+1. Going to [http://localhost:54324](http://localhost:54324)
+2. Finding your test email in the list of received messages
+
+## Common Use Cases
+
+### 1. Email Verification
+
+When testing user signup:
+1. Create a new account using any email address
+2. Go to InBucket/Mailpit at [http://localhost:54324](http://localhost:54324)
+3. Find the verification email
+4. Click the verification link or copy the verification code
+
+### 2. Password Reset
+
+To test password reset flows:
+1. Request a password reset using any email
+2. Check InBucket/Mailpit for the reset email
+3. Use the reset link or code to complete the process
+
+### 3. Team Invitations
+
+When testing team invites:
+1. Send an invitation to any email address
+2. Check Mailpit for the invitation email
+3. Use the invitation link to accept
+
+## Mailpit vs Production Emails
+
+Remember that Mailpit is for development only. In production:
+
+1. Configure a proper email service provider (Resend, SendGrid, etc.)
+2. Set up proper email authentication (SPF, DKIM)
+3. Use production-grade SMTP settings
+4. Monitor email deliverability
+
+## Using a different email provider during local development
+
+If you want to use a different email provider, switch the environment variables at `apps/web/.env.development`:
+
+```bash
+EMAIL_SENDER=test@makerkit.dev
+EMAIL_PORT=
+EMAIL_HOST=
+EMAIL_TLS=
+EMAIL_USER=
+EMAIL_PASSWORD=
+```
+
+NB: Supabase authentication emails will still be sent using InBucket/Mailpit.
+
+## Conclusion
+
+InBucket/Mailpit are valuable tools for local development, allowing you to:
+- Test email flows without sending real emails
+- Iterate quickly on email templates
+- Debug email-related issues
+- Develop with confidence
+
+Remember to switch to a proper email provider when deploying to production!

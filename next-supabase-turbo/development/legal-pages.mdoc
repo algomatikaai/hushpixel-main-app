@@ -1,0 +1,53 @@
+---
+status: "published"
+label: "Legal Pages"
+title: "Legal Pages in the Next.js Supabase Turbo Starter Kit"
+description: "Learn how to create and update legal pages in the Next.js Supabase Turbo Starter Kit."
+order: 8
+---
+
+{% sequence title="Legal pages in the Starter Kit" description="Learn how to create and update legal pages in the Next.js Supabase Turbo Starter Kit." %}
+
+[Includes pages in the Starter Kit](#includes-pages-in-the-starter-kit)
+
+[Using a CMS for legal pages](#using-a-cms-for-legal-pages)
+
+{% /sequence %}
+
+## Includes pages in the Starter Kit
+
+Legal pages are defined in the `apps/web/app/(marketing)/(legal)` directory. 
+
+Makerkit comes with the following legal pages:
+
+1. **Terms and Conditions**: `apps/web/app/(marketing)/(legal)/terms-and-conditions.mdx`
+2. **Privacy Policy**: `apps/web/app/(marketing)/(legal)/privacy-policy.mdx`
+3. **Cookie Policy**: `apps/web/app/(marketing)/(legal)/cookie-policy.mdx`
+
+For obvious reasons, **these pages are empty and you need to fill in the content**.
+
+Do yourself a favor and do not use ChatGPT to generate these pages.
+
+### Using a CMS for legal pages
+
+You can use a CMS to manage the content of the legal pages. To do this, use the [CMS Client](content/cms):
+
+```tsx
+import { createCmsClient } from '@kit/cms';
+
+export async function MyPage() {
+  const cms = await createCmsClient();
+
+  const { title, content } = await cms.getContentBySlug({
+    slug: `slug`,
+    collection: `pages`
+  });
+
+  return (
+    <div>
+      <h1>{title}</h1>
+      <div dangerouslySetInnerHTML={{ __html: content }} />
+    </div>
+  );
+}
+```
