@@ -168,46 +168,38 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
       const userExists = existingUser.users.find(user => user.email === email);
       
       if (userExists) {
-        logger.info({ ...ctx, userId: userExists.id }, 'User already exists, updating subscription and generating magic link...');
+        logger.info({ ...ctx, userId: userExists.id }, 'User already exists, generating auth link for existing user...');
         
-        // Generate magic link for existing user
-        const { data: magicLink, error: magicLinkError } = await supabase.auth.admin.generateLink({
-          type: 'magiclink',
+        // Generate proper auth link using Makerkit pattern
+        const { data: authLink, error: authLinkError } = await supabase.auth.admin.generateLink({
+          type: 'signup', // Use signup type for new sessions
           email: userExists.email,
           options: {
-            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/home?welcome=premium`
+            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/home?welcome=premium&message=payment-success`
           }
         });
 
-        if (!magicLinkError && magicLink) {
-          // Update user metadata with magic link
-          // Use the actual Stripe checkout session ID passed from the handler
-          const checkoutSessionId = sessionId || 
-                                   subscription.metadata?.checkout_session_id || 
-                                   subscription.latest_invoice || 
-                                   subscription.id;
-          
+        if (!authLinkError && authLink) {
           logger.info({ 
             ...ctx, 
             userId: userExists.id,
             stripeSessionId: sessionId,
-            checkoutSessionId,
-            magicLinkToken: magicLink.properties.action_link?.substring(0, 50) + '...'
-          }, '🎯 STORING MAGIC LINK WITH CORRECT STRIPE SESSION ID (existing user)');
+            authUrl: authLink.properties.action_link?.substring(0, 50) + '...'
+          }, '✅ Auth link generated for existing user - will update Stripe success URL');
           
+          // Store auth token in user metadata temporarily for lookup
+          const tokenHash = authLink.properties.hashed_token;
           await supabase.auth.admin.updateUserById(userExists.id, {
             user_metadata: {
               ...userExists.user_metadata,
-              magic_link_token: magicLink.properties.action_link,
-              stripe_session_id: checkoutSessionId,
-              stripe_subscription_id: subscription.id, // Also store subscription ID for reference
-              magic_link_created_at: new Date().toISOString()
+              auth_token_hash: tokenHash,
+              stripe_session_id: sessionId,
+              auth_link_created_at: new Date().toISOString()
             }
           });
           
-          logger.info({ ...ctx, userId: userExists.id, checkoutSessionId }, '✅ Magic link generated for existing user with CORRECT session ID');
         } else {
-          logger.warn({ ...ctx, error: magicLinkError }, 'Failed to generate magic link for existing user');
+          logger.warn({ ...ctx, error: authLinkError }, 'Failed to generate auth link for existing user');
         }
         
         // Update subscription to point to existing user's account
@@ -250,44 +242,36 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
 
       logger.info({ ...ctx, userId: newUser.user.id }, 'Successfully created user account');
 
-      // Generate magic link for automatic sign-in
-      const { data: magicLink, error: magicLinkError } = await supabase.auth.admin.generateLink({
-        type: 'magiclink',
+      // Generate proper auth link using Makerkit pattern
+      const { data: authLink, error: authLinkError } = await supabase.auth.admin.generateLink({
+        type: 'signup', // Use signup type for new user authentication
         email: newUser.user.email,
         options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/home?welcome=premium`
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/home?welcome=premium&message=payment-success`
         }
       });
 
-      if (!magicLinkError && magicLink) {
-        // Store magic link + session ID for success page lookup
-        // Use the actual Stripe checkout session ID passed from the handler
-        const checkoutSessionId = sessionId || 
-                                 subscription.metadata?.checkout_session_id || 
-                                 subscription.latest_invoice || 
-                                 subscription.id;
-        
+      if (!authLinkError && authLink) {
         logger.info({ 
           ...ctx, 
           userId: newUser.user.id,
           stripeSessionId: sessionId,
-          checkoutSessionId,
-          magicLinkToken: magicLink.properties.action_link?.substring(0, 50) + '...'
-        }, '🎯 STORING MAGIC LINK WITH CORRECT STRIPE SESSION ID (new user)');
+          authUrl: authLink.properties.action_link?.substring(0, 50) + '...'
+        }, '✅ Auth link generated for new user - ready for automatic login');
         
+        // Store auth token hash in user metadata for lookup
+        const tokenHash = authLink.properties.hashed_token;
         await supabase.auth.admin.updateUserById(newUser.user.id, {
           user_metadata: {
             ...newUser.user.user_metadata,
-            magic_link_token: magicLink.properties.action_link,
-            stripe_session_id: checkoutSessionId,
-            stripe_subscription_id: subscription.id, // Also store subscription ID for reference
-            magic_link_created_at: new Date().toISOString()
+            auth_token_hash: tokenHash,
+            stripe_session_id: sessionId,
+            auth_link_created_at: new Date().toISOString()
           }
         });
         
-        logger.info({ ...ctx, userId: newUser.user.id, checkoutSessionId }, '✅ Magic link generated for new user with CORRECT session ID');
       } else {
-        logger.warn({ ...ctx, error: magicLinkError }, 'Failed to generate magic link for new user');
+        logger.warn({ ...ctx, error: authLinkError }, 'Failed to generate auth link for new user');
       }
 
       // Update subscription to point to new user's account (the account is created automatically by trigger)
