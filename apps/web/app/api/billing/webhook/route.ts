@@ -1,5 +1,6 @@
 import { getPlanTypesMap } from '@kit/billing';
 import { getBillingEventHandlerService } from '@kit/billing-gateway';
+import { createStripeClient } from '@kit/billing-stripe';
 import { enhanceRouteHandler } from '@kit/next/routes';
 import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
@@ -129,12 +130,39 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
 
   try {
     // Check if this is a guest checkout by looking for quiz session in metadata
-    const metadata = subscription.metadata || {};
+    let metadata = subscription.metadata || {};
+    
+    // 🚨 CRITICAL FIX: For guest checkouts, metadata is on the checkout session, NOT subscription
+    if ((!metadata.source || !metadata.email) && sessionId) {
+      try {
+        logger.info({ ...ctx, sessionId }, 'Subscription metadata empty/incomplete, retrieving from Stripe checkout session...');
+        const stripe = await createStripeClient();
+        const checkoutSession = await stripe.checkout.sessions.retrieve(sessionId);
+        
+        // Merge checkout session metadata with subscription metadata (checkout takes priority)
+        metadata = { ...metadata, ...checkoutSession.metadata };
+        
+        logger.info({ 
+          ...ctx, 
+          checkoutMetadata: checkoutSession.metadata,
+          mergedMetadata: metadata 
+        }, '✅ Successfully retrieved metadata from Stripe checkout session');
+        
+      } catch (stripeError) {
+        logger.warn({ 
+          ...ctx, 
+          error: stripeError,
+          sessionId 
+        }, 'Failed to retrieve checkout session metadata from Stripe');
+        // Continue with subscription metadata only
+      }
+    }
+
     const quizSessionId = metadata.session || metadata.sessionId;
     const source = metadata.source;
     const email = metadata.email;
 
-    // 🔍 DEBUG: Log all subscription data to find session ID
+    // 🔍 DEBUG: Log comprehensive metadata analysis
     logger.info({ 
       ...ctx, 
       stripeSessionId: sessionId, // The Stripe checkout session ID from webhook parameter
@@ -143,8 +171,10 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
       email: email?.substring(0, 3) + '***',
       subscriptionId: subscription.id,
       latestInvoice: subscription.latest_invoice,
-      fullSubscription: JSON.stringify(subscription, null, 2)
-    }, 'DEBUG: Full subscription object analysis - FIXED VARIABLE COLLISION');
+      subscriptionMetadata: subscription.metadata,
+      finalMetadata: metadata,
+      metadataSource: metadata.source ? 'found' : 'missing'
+    }, '🔍 METADATA ANALYSIS: Checkout session + subscription metadata merged');
 
     // If this looks like a guest checkout from quiz
     if (source === 'quiz' && quizSessionId && email) {
