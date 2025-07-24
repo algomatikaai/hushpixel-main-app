@@ -66,24 +66,20 @@ export async function POST(request: NextRequest) {
         }
       });
     } else {
-      // Generate secure password for auto-signin
-      const autoPassword = randomBytes(32).toString('hex');
+      logger.info({ ...ctx }, 'Creating new user following Makerkit patterns');
       
-      logger.info({ ...ctx }, 'Creating new user with auto-signin capability');
-      
-      // Create new user with quiz preferences in metadata
+      // Create new user following Makerkit admin patterns (no password required)
       const { data: newUser, error: userError } = await adminSupabase.auth.admin.createUser({
         email,
-        password: autoPassword,
         email_confirm: true, // Skip email confirmation for seamless experience
         user_metadata: {
+          name: email.split('@')[0], // Default name from email
           character_type: responses.character_type,
           body_type: responses.body_type,
           quiz_session_id: sessionId,
           quiz_source: source || 'quiz',
           quiz_completed_at: new Date().toISOString(),
-          auto_created: true,
-          auto_password: autoPassword // Store for immediate signin
+          auto_created: true
         }
       });
 

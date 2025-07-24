@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify this is an auto-created quiz user
-    if (!user.user_metadata?.auto_created || !user.user_metadata?.auto_password) {
+    if (!user.user_metadata?.auto_created) {
       logger.error({ ...ctx, userId }, 'User not eligible for auto-signin');
       return NextResponse.json({ error: 'Auto-signin not available for this user' }, { status: 403 });
     }
