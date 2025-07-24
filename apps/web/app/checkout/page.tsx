@@ -20,81 +20,79 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
     const params = await searchParams;
     const { plan, source, intent, email, session } = params;
   
-  // Check if user is authenticated
-  const supabase = getSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  // Debug logging to identify guest checkout issue
-  console.log('🔍 Checkout Debug:', {
-    userAuthenticated: !!user,
-    userId: user?.id || 'none',
-    email: email || 'missing',
-    source: source || 'missing',
-    session: session || 'missing',
-    plan: plan || 'missing',
-    intent: intent || 'missing',
-    guestCondition: !user && email && source === 'quiz' && session,
-    timestamp: new Date().toISOString()
-  });
-  
-  // If not authenticated but we have quiz session data, allow guest checkout
-  // User will be created after payment via Stripe webhook
-  if (!user && email && source === 'quiz' && session) {
-    console.log('✅ Guest checkout conditions met - rendering guest checkout');
-    return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="container mx-auto py-8">
-          <Suspense fallback={
-            <div className="flex items-center justify-center min-h-screen">
-              <Spinner className="h-12 w-12" />
-            </div>
-          }>
-            <PremiumCheckout 
-              userId={null} // Guest checkout
-              email={email}
-              source={source}
-              sessionId={session}
-              isGuestCheckout={true}
-            />
-          </Suspense>
-        </div>
-      </div>
-    );
-  }
-  
-  // If not authenticated and no quiz session, redirect to signup with checkout intent
-  if (!user) {
-    console.log('❌ Guest checkout conditions failed - redirecting to signup');
-    const signupUrl = new URL('/auth/sign-up', process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
-    signupUrl.searchParams.set('next', '/checkout');
-    if (plan) signupUrl.searchParams.set('plan', plan);
-    if (source) signupUrl.searchParams.set('source', source);
-    if (intent) signupUrl.searchParams.set('intent', intent);
-    // Preserve email and session parameters for return journey
-    if (email) signupUrl.searchParams.set('email', email);
-    if (session) signupUrl.searchParams.set('session', session);
+    // Check if user is authenticated - NEW SIMPLIFIED APPROACH
+    const supabase = getSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
     
-    console.log('🔄 Redirecting to:', signupUrl.toString());
-    redirect(signupUrl.toString());
-  }
-
-  return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="container mx-auto py-8">
-        <Suspense fallback={
-          <div className="flex items-center justify-center min-h-screen">
-            <Spinner className="h-12 w-12" />
+    console.log('💰 Simplified Checkout:', {
+      userAuthenticated: !!user,
+      userId: user?.id || 'none',
+      userEmail: user?.email?.substring(0, 3) + '***' || 'none',
+      source: source || 'missing',
+      plan: plan || 'premium-monthly',
+      intent: intent || 'missing',
+      hasQuizData: !!(user?.user_metadata?.character_type && user?.user_metadata?.body_type),
+      timestamp: new Date().toISOString()
+    });
+    
+    // AUTHENTICATED USER FLOW - Standard Makerkit checkout
+    if (user) {
+      console.log('✅ Authenticated user - proceeding with standard checkout');
+      return (
+        <div className="min-h-screen bg-background p-4">
+          <div className="container mx-auto py-8">
+            <Suspense fallback={
+              <div className="flex items-center justify-center min-h-screen">
+                <Spinner className="h-12 w-12" />
+              </div>
+            }>
+              <PremiumCheckout 
+                userId={user.id}
+                email={user.email}
+                source={source}
+                plan={plan}
+                intent={intent}
+              />
+            </Suspense>
           </div>
-        }>
-          <PremiumCheckout 
-            userId={user.id}
-            email={user.email}
-            source={source}
-          />
-        </Suspense>
-      </div>
-    </div>
-  );
+        </div>
+      );
+    }
+    
+    // UNAUTHENTICATED USER - Handle gracefully with backwards compatibility
+    if (!user && email && source === 'quiz' && session) {
+      console.log('⚠️ Anonymous user detected - using backwards compatibility guest checkout');
+      return (
+        <div className="min-h-screen bg-background p-4">
+          <div className="container mx-auto py-8">
+            <Suspense fallback={
+              <div className="flex items-center justify-center min-h-screen">
+                <Spinner className="h-12 w-12" />
+              </div>
+            }>
+              <PremiumCheckout 
+                userId={null}
+                email={email}
+                source={source}
+                sessionId={session}
+                isGuestCheckout={true}
+                plan={plan}
+                intent={intent}
+              />
+            </Suspense>
+          </div>
+        </div>
+      );
+    }
+    
+    // NO VALID AUTHENTICATION - Redirect to quiz to start proper flow
+    console.log('❌ No valid auth state - redirecting to quiz for proper flow');
+    const redirectUrl = new URL('/quiz', process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
+    if (plan) redirectUrl.searchParams.set('plan', plan);
+    if (source) redirectUrl.searchParams.set('source', source);
+    redirect(redirectUrl.toString());
+
+  return null; // Never reached
   } catch (error) {
     console.error('Checkout page error:', error);
     // Return a simple error page

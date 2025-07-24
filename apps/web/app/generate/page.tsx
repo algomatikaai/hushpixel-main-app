@@ -12,16 +12,57 @@ interface GeneratePageProps {
     body?: string;
     email?: string;
     session?: string;
+    auth?: string;
+    user?: string;
   }>;
 }
 
 export default async function GeneratePage({ searchParams }: GeneratePageProps) {
   const params = await searchParams;
-  const { character, body, email, session } = params;
+  const { character, body, email, session, auth, user: userParam } = params;
   
-  // Handle quiz flow - auto-generate based on quiz selections (anonymous users)
+  // Check if user is authenticated - NEW AUTH-FIRST APPROACH
+  const supabase = getSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  console.log('🔍 Generate page auth check:', {
+    isAuthenticated: !!user,
+    userId: user?.id || 'none',
+    hasQuizMetadata: !!(user?.user_metadata?.character_type && user?.user_metadata?.body_type),
+    urlParams: { character, body, email: email?.substring(0, 3) + '***', session },
+    authParam: auth,
+    userParam
+  });
+
+  // AUTHENTICATED USER FLOW - Use quiz preferences from user metadata
+  if (user && user.user_metadata?.character_type && user.user_metadata?.body_type) {
+    console.log('✅ Authenticated user with quiz preferences - using metadata');
+    return (
+      <>
+        <FacebookPixel />
+        <Suspense fallback={<GenerationLoading />}>
+          <QuizAutoGenerate 
+            character={user.user_metadata.character_type}
+            body={user.user_metadata.body_type}
+            email={user.email!}
+            session={user.user_metadata.quiz_session_id || 'auth-user'}
+            isAuthenticated={true}
+            userId={user.id}
+          />
+        </Suspense>
+      </>
+    );
+  }
+
+  // AUTHENTICATED USER WITHOUT QUIZ DATA - Redirect to workspace 
+  if (user) {
+    console.log('🔄 Authenticated user without quiz data - redirecting to workspace');
+    redirect('/home/generate');
+  }
+
+  // BACKWARDS COMPATIBILITY - Anonymous quiz flow with URL parameters
   if (character && body && email && session) {
-    console.log('Quiz flow detected:', { character, body, email: email.substring(0, 3) + '***', session });
+    console.log('⚠️ Anonymous quiz flow detected (backwards compatibility)');
     return (
       <>
         <FacebookPixel />
@@ -31,21 +72,15 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
             body={body}
             email={decodeURIComponent(email)}
             session={session}
+            isAuthenticated={false}
           />
         </Suspense>
       </>
     );
   }
 
-  // Check if user is authenticated - if so, redirect to workspace
-  const supabase = getSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (user) {
-    redirect('/home/generate');
-  }
-
-  // For anonymous users without quiz params, redirect to quiz
+  // NO VALID FLOW - Redirect to quiz
+  console.log('❌ No valid flow detected - redirecting to quiz');
   redirect('/quiz');
 }
 

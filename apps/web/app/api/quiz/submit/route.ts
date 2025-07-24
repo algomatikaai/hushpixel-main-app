@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { createClient } from '@supabase/supabase-js';
 import { getLogger } from '@kit/shared/logger';
 import { z } from 'zod';
+import { randomBytes } from 'crypto';
 
 const QuizSubmissionSchema = z.object({
   email: z.string().email(),
@@ -30,15 +32,73 @@ export async function POST(request: NextRequest) {
       sessionId,
       source,
       timestamp: new Date().toISOString()
-    }, 'Quiz submission received');
+    }, 'Quiz submission received - starting auto-user creation');
 
-    // Use service role for quiz submissions (bypasses RLS)
+    // Use admin client for user creation (bypasses email confirmation)
+    const adminSupabase = getSupabaseServerAdminClient();
+    
+    // Use service role for quiz responses storage
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Store quiz responses and lead data
+    // Check if user already exists
+    const { data: existingUsers } = await adminSupabase.auth.admin.listUsers();
+    const existingUser = existingUsers.users.find(u => u.email === email);
+
+    let userId: string;
+    let isNewUser = false;
+
+    if (existingUser) {
+      logger.info({ ...ctx, userId: existingUser.id }, 'User already exists, updating preferences');
+      userId = existingUser.id;
+      
+      // Update existing user's quiz preferences
+      await adminSupabase.auth.admin.updateUserById(existingUser.id, {
+        user_metadata: {
+          ...existingUser.user_metadata,
+          character_type: responses.character_type,
+          body_type: responses.body_type,
+          quiz_session_id: sessionId,
+          quiz_source: source || 'quiz',
+          quiz_completed_at: new Date().toISOString()
+        }
+      });
+    } else {
+      // Generate secure password for auto-signin
+      const autoPassword = randomBytes(32).toString('hex');
+      
+      logger.info({ ...ctx }, 'Creating new user with auto-signin capability');
+      
+      // Create new user with quiz preferences in metadata
+      const { data: newUser, error: userError } = await adminSupabase.auth.admin.createUser({
+        email,
+        password: autoPassword,
+        email_confirm: true, // Skip email confirmation for seamless experience
+        user_metadata: {
+          character_type: responses.character_type,
+          body_type: responses.body_type,
+          quiz_session_id: sessionId,
+          quiz_source: source || 'quiz',
+          quiz_completed_at: new Date().toISOString(),
+          auto_created: true,
+          auto_password: autoPassword // Store for immediate signin
+        }
+      });
+
+      if (userError || !newUser.user) {
+        logger.error({ ...ctx, error: userError }, 'Failed to create user');
+        return NextResponse.json({ error: 'Failed to create user account' }, { status: 500 });
+      }
+
+      userId = newUser.user.id;
+      isNewUser = true;
+      
+      logger.info({ ...ctx, userId }, 'User created successfully');
+    }
+
+    // Store quiz responses for analytics (preserve existing functionality)
     const { data: quizData, error: quizError } = await supabase
       .from('quiz_responses')
       .insert({
@@ -47,26 +107,34 @@ export async function POST(request: NextRequest) {
         character_type: responses.character_type,
         body_type: responses.body_type,
         personality: responses.personality,
-        source: source || 'quiz'
+        source: source || 'quiz',
+        user_id: userId // Link to created user
       })
       .select()
       .single();
 
     if (quizError) {
       logger.error({ ...ctx, error: quizError }, 'Failed to store quiz responses');
-      return NextResponse.json({ error: 'Failed to store quiz data' }, { status: 500 });
+      // Don't fail if analytics storage fails, user creation succeeded
     }
 
-    logger.info({ ...ctx, quizId: quizData.id }, 'Quiz responses stored successfully');
+    logger.info({ 
+      ...ctx, 
+      userId,
+      quizId: quizData?.id,
+      isNewUser 
+    }, 'Quiz submission completed with user creation');
 
-    // Generate URL for instant AI generation (WOW moment)
-    const generateUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/generate?character=${responses.character_type}&body=${responses.body_type}&email=${encodeURIComponent(email)}&session=${sessionId}&source=${source || 'quiz'}`;
+    // Generate auth URL for authenticated flow (user has account now)
+    const generateUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/generate?auth=quiz&user=${userId}&source=${source || 'quiz'}`;
 
     return NextResponse.json({
       success: true,
-      message: 'Quiz submitted successfully',
+      message: 'Quiz submitted and account created successfully',
       generateUrl,
       sessionId,
+      userId,
+      isNewUser,
       leadCaptured: true
     });
 

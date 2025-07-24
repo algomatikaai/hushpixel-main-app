@@ -15,6 +15,8 @@ interface QuizAutoGenerateProps {
   body: string;
   email: string;
   session: string;
+  isAuthenticated?: boolean;
+  userId?: string;
 }
 
 interface GenerationResult {
@@ -40,36 +42,55 @@ const BODY_TYPE_PROMPTS = {
   'petite': 'delicate petite frame, adorable proportions, cute and alluring'
 };
 
-export function QuizAutoGenerate({ character, body, email, session }: QuizAutoGenerateProps) {
+export function QuizAutoGenerate({ 
+  character, 
+  body, 
+  email, 
+  session, 
+  isAuthenticated = false, 
+  userId 
+}: QuizAutoGenerateProps) {
   const [isGenerating, setIsGenerating] = useState(true);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Capture email on component mount
+  // Capture email on component mount (only for anonymous users)
   useEffect(() => {
-    // Store email and session data in localStorage
+    console.log('🎯 Generate component mounted:', { 
+      isAuthenticated, 
+      userId, 
+      email: email.substring(0, 3) + '***', 
+      character, 
+      body 
+    });
+
+    // Store session data in localStorage (enhanced for auth users)
     const sessionData = {
       sessionId: session,
       email: email,
       characterType: character,
       bodyType: body,
       timestamp: Date.now(),
-      generationStarted: true
+      generationStarted: true,
+      isAuthenticated,
+      userId: userId || null
     };
     
     localStorage.setItem('hushpixel_session', JSON.stringify(sessionData));
     
-    // Simple email capture - log to console for now (can be enhanced later)
-    console.log('🎯 Lead captured:', { email: email.substring(0, 3) + '***', character, body, session });
-    
-    // Capture email via simple API call (non-blocking)
-    fetch('/api/capture-lead', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, character, body, session, source: 'quiz_auto_generate' })
-    }).catch(err => console.log('Lead capture API not available:', err));
+    // Only capture leads for anonymous users (authenticated users already in system)
+    if (!isAuthenticated) {
+      console.log('🎯 Anonymous user - capturing lead');
+      fetch('/api/capture-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, character, body, session, source: 'quiz_auto_generate' })
+      }).catch(err => console.log('Lead capture API not available:', err));
+    } else {
+      console.log('✅ Authenticated user - skipping lead capture');
+    }
 
-  }, [email, session, character, body]);
+  }, [email, session, character, body, isAuthenticated, userId]);
 
   // Auto-generate image on component mount
   useEffect(() => {
@@ -223,7 +244,14 @@ export function QuizAutoGenerate({ character, body, email, session }: QuizAutoGe
   }
 
   if (result) {
-    return <GenerationSuccess result={result} character={character} body={body} email={email} />;
+    return <GenerationSuccess 
+      result={result} 
+      character={character} 
+      body={body} 
+      email={email} 
+      isAuthenticated={isAuthenticated}
+      userId={userId}
+    />;
   }
 
   return null;
@@ -309,11 +337,13 @@ function ErrorDisplay({ error, character, body }: { error: string; character: st
   );
 }
 
-function GenerationSuccess({ result, character, body, email }: { 
+function GenerationSuccess({ result, character, body, email, isAuthenticated, userId }: { 
   result: GenerationResult; 
   character: string; 
   body: string;
   email: string;
+  isAuthenticated?: boolean;
+  userId?: string;
 }) {
   const [premiumUsers, setPremiumUsers] = useState(Math.floor(Math.random() * 50) + 20);
   const [timeLeft, setTimeLeft] = useState(23 * 60 + 47); // 23:47
@@ -357,37 +387,46 @@ function GenerationSuccess({ result, character, body, email }: {
       currency: 'USD'
     });
     
-    // Store user's companion data for post-authentication
+    // Store user's companion data for post-checkout
     const companionData = {
       characterName: result.characterName,
       character,
       body,
       email,
       imageUrl: result.imageUrl,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      isAuthenticated: isAuthenticated || false,
+      userId: userId || null
     };
     localStorage.setItem('hushpixel_companion', JSON.stringify(companionData));
     
-    // Get session data from localStorage
-    const sessionData = localStorage.getItem('hushpixel_session');
-    let sessionId = null;
-    if (sessionData) {
-      try {
-        const parsed = JSON.parse(sessionData);
-        sessionId = parsed.sessionId;
-      } catch (e) {
-        console.log('Could not parse session data');
-      }
-    }
-    
-    // Direct to seamless checkout with email and session data
+    // Build checkout URL based on authentication status
     const checkoutUrl = new URL('/checkout', window.location.origin);
     checkoutUrl.searchParams.set('plan', 'premium-monthly');
     checkoutUrl.searchParams.set('source', 'quiz');
     checkoutUrl.searchParams.set('intent', 'premium');
-    checkoutUrl.searchParams.set('email', email);
-    if (sessionId) {
-      checkoutUrl.searchParams.set('session', sessionId);
+    
+    if (isAuthenticated) {
+      // AUTHENTICATED USER - Standard checkout (no guest params needed)
+      console.log('🔐 Authenticated checkout for user:', userId);
+      // User is already logged in, standard checkout will work
+    } else {
+      // ANONYMOUS USER - Guest checkout (backwards compatibility)
+      console.log('👤 Anonymous checkout - using guest flow');
+      checkoutUrl.searchParams.set('email', email);
+      
+      // Get session data from localStorage for guest checkout
+      const sessionData = localStorage.getItem('hushpixel_session');
+      if (sessionData) {
+        try {
+          const parsed = JSON.parse(sessionData);
+          if (parsed.sessionId) {
+            checkoutUrl.searchParams.set('session', parsed.sessionId);
+          }
+        } catch (e) {
+          console.log('Could not parse session data');
+        }
+      }
     }
     
     window.location.href = checkoutUrl.toString();

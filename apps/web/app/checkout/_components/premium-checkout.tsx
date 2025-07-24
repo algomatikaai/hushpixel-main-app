@@ -22,10 +22,14 @@ interface PremiumCheckoutProps {
   source?: string;
   sessionId?: string;
   isGuestCheckout?: boolean;
+  plan?: string;
+  intent?: string;
 }
 
-export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheckout }: PremiumCheckoutProps) {
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
+export function PremiumCheckout({ userId, email, source, sessionId, isGuestCheckout, plan, intent }: PremiumCheckoutProps) {
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>(
+    plan === 'premium-annual' ? 'annual' : 'monthly'
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(23 * 60 + 47); // 23:47
   const [checkoutToken, setCheckoutToken] = useState<string | null>(null);
