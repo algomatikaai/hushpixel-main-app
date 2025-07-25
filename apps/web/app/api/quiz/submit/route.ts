@@ -92,6 +92,28 @@ export async function POST(request: NextRequest) {
       isNewUser = true;
       
       logger.info({ ...ctx, userId }, 'User created successfully');
+      
+      // WORKAROUND: Manually create account record if trigger fails
+      // This ensures user creation works even if database triggers are missing
+      try {
+        const { error: accountError } = await supabase
+          .from('accounts')
+          .insert({
+            id: userId,
+            primary_owner_user_id: userId,
+            name: email.split('@')[0],
+            email: email,
+            is_personal_account: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          
+        if (accountError) {
+          logger.warn({ ...ctx, error: accountError }, 'Account may already exist or trigger worked');
+        }
+      } catch (err) {
+        logger.warn({ ...ctx, error: err }, 'Account creation handled by trigger');
+      }
     }
 
     // Store quiz responses for analytics (preserve existing functionality)
