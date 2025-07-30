@@ -63,19 +63,19 @@ export const POST = enhanceRouteHandler(
     logger.info({ 
       ...ctx, 
       quizId: quizData?.id,
-      abTestVariant,
+      abTestVariant: 'direct_paywall', // TEMPORARILY HARDCODED
       leadCaptured: true
     }, 'Quiz submission completed - LEAD CAPTURED (no user creation)');
 
     // Generate URL for static image display (no auth required)
-    const generateUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/generate?session=${sessionId}&variant=${abTestVariant}`;
+    const generateUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/generate?session=${sessionId}&variant=direct_paywall`;
 
     return NextResponse.json({
       success: true,
       message: 'Quiz submitted successfully',
       generateUrl,
       sessionId,
-      abTestVariant,
+      abTestVariant: 'direct_paywall', // TEMPORARILY HARDCODED
       leadCaptured: true,
       userId: null,        // Add this to match client expectations
       isNewUser: false     // Add this to match client expectations
