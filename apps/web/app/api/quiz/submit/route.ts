@@ -46,7 +46,7 @@ export const POST = enhanceRouteHandler(
         body_type: responses.body_type,
         personality: responses.personality,
         source: source || 'quiz',
-        ab_test_variant: abTestVariant,
+        // ab_test_variant: abTestVariant, // TEMPORARILY DISABLED - column doesn't exist in production
         user_id: null // No user created yet - will be linked after payment
       })
       .select()
