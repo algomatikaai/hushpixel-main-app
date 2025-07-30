@@ -19,20 +19,52 @@ interface GeneratePageProps {
 
 export default async function GeneratePage({ searchParams }: GeneratePageProps) {
   const params = await searchParams;
-  const { character, body, email, session, auth, user: userParam } = params;
+  const { email, session, source } = params;
   
-  // Check if user is authenticated - NEW AUTH-FIRST APPROACH
+  console.log('🔍 Generate page - ZERO FRICTION FLOW:', {
+    email: email?.substring(0, 3) + '***' || 'missing',
+    session: session || 'missing',
+    source: source || 'missing',
+    timestamp: new Date().toISOString()
+  });
+
+  // ZERO FRICTION FLOW - Anonymous generation with quiz data
+  if (email && session) {
+    console.log('✅ Zero friction flow - generating without authentication');
+    
+    // Get quiz data from database using session
+    const supabase = getSupabaseServerClient();
+    const { data: quizData } = await supabase
+      .from('quiz_responses')
+      .select('*')
+      .eq('session_id', session)
+      .eq('email', decodeURIComponent(email))
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (quizData) {
+      return (
+        <>
+          <FacebookPixel />
+          <Suspense fallback={<GenerationLoading />}>
+            <QuizAutoGenerate 
+              character={quizData.character_type}
+              body={quizData.body_type}
+              email={decodeURIComponent(email)}
+              session={session}
+              isAuthenticated={false}
+              userId={null}
+            />
+          </Suspense>
+        </>
+      );
+    }
+  }
+
+  // Check if user is authenticated (for existing users)
   const supabase = getSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  
-  console.log('🔍 Generate page auth check:', {
-    isAuthenticated: !!user,
-    userId: user?.id || 'none',
-    hasQuizMetadata: !!(user?.user_metadata?.character_type && user?.user_metadata?.body_type),
-    urlParams: { character, body, email: email?.substring(0, 3) + '***', session },
-    authParam: auth,
-    userParam
-  });
 
   // AUTHENTICATED USER FLOW - Use quiz preferences from user metadata
   if (user && user.user_metadata?.character_type && user.user_metadata?.body_type) {
@@ -58,25 +90,6 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
   if (user) {
     console.log('🔄 Authenticated user without quiz data - redirecting to workspace');
     redirect('/home/generate');
-  }
-
-  // BACKWARDS COMPATIBILITY - Anonymous quiz flow with URL parameters
-  if (character && body && email && session) {
-    console.log('⚠️ Anonymous quiz flow detected (backwards compatibility)');
-    return (
-      <>
-        <FacebookPixel />
-        <Suspense fallback={<GenerationLoading />}>
-          <QuizAutoGenerate 
-            character={character}
-            body={body}
-            email={decodeURIComponent(email)}
-            session={session}
-            isAuthenticated={false}
-          />
-        </Suspense>
-      </>
-    );
   }
 
   // NO VALID FLOW - Redirect to quiz
