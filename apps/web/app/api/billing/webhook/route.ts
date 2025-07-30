@@ -58,7 +58,7 @@ export const POST = enhanceRouteHandler(
             ...ctx,
             sessionId,
             customerId,
-            subscriptionId: subscription.id,
+            subscriptionId: 'id' in subscription ? subscription.id : 'unknown',
             eventType: event.type,
             objectId: event.data?.object?.id
           }, '🎯 CHECKOUT SESSION COMPLETED - Calling handleGuestCheckoutCompletion with FIXED variables');
@@ -114,8 +114,8 @@ export const GET = enhanceRouteHandler(
 );
 
 /**
- * Handle checkout completion using simplified Makerkit patterns
- * Supports both authenticated users (new flow) and guest checkout (backwards compatibility)
+ * Handle checkout completion for ZERO FRICTION money printer
+ * Creates user after payment and generates auto sign-in session
  */
 async function handleGuestCheckoutCompletion(subscription: any, customerId: string, sessionId?: string) {
   const logger = await getLogger();
@@ -127,7 +127,7 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
     sessionId,
   };
 
-  logger.info(ctx, 'Processing checkout completion...');
+  logger.info(ctx, 'Processing checkout completion - MONEY PRINTER MODE');
 
   try {
     if (!sessionId) {
@@ -143,14 +143,15 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
 
     const source = metadata.source;
     const email = metadata.email || customerEmail;
+    const quizSessionId = metadata.quiz_session_id;
 
     logger.info({ 
       ...ctx, 
       source, 
       email: email?.substring(0, 3) + '***',
       customerEmail: customerEmail?.substring(0, 3) + '***',
-      hasMetadata: !!Object.keys(metadata).length,
-      isGuestCheckout: metadata.is_guest_checkout === 'true'
+      quizSessionId,
+      hasMetadata: !!Object.keys(metadata).length
     }, 'Retrieved checkout session metadata');
 
     if (!email) {
@@ -158,7 +159,16 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
       return;
     }
 
-    // Check if user already exists (most users should exist due to auto-creation)
+    // Get quiz data for this user
+    const { data: quizData } = await supabase
+      .from('quiz_responses')
+      .select('*')
+      .eq('email', email)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    // Check if user already exists
     const { data: existingUsers } = await supabase.auth.admin.listUsers();
     const existingUser = existingUsers.users.find(user => user.email === email);
 
@@ -168,75 +178,84 @@ async function handleGuestCheckoutCompletion(subscription: any, customerId: stri
       logger.info({ 
         ...ctx, 
         userId: existingUser.id,
-        hasQuizData: !!(existingUser.user_metadata?.character_type && existingUser.user_metadata?.body_type),
-        autoCreated: !!existingUser.user_metadata?.auto_created
-      }, 'User already exists (likely auto-created from quiz)');
+        hasQuizData: !!quizData
+      }, 'User already exists - updating with payment completion');
       userId = existingUser.id;
-
-      // For existing auto-created users, we don't need magic links - they're already signed in
-      if (existingUser.user_metadata?.auto_created) {
-        logger.info({ ...ctx, userId }, 'Auto-created user completed payment - no additional auth needed');
-        return;
-      }
     } else {
-      // Fallback: Create new user for legacy guest checkout
-      logger.info({ ...ctx }, 'Creating new user for legacy guest checkout');
+      // Create new user after payment (MONEY PRINTER FLOW)
+      logger.info({ ...ctx }, 'Creating new user after payment completion');
       
       const { data: newUser, error: userError } = await supabase.auth.admin.createUser({
         email,
         email_confirm: true,
         user_metadata: {
           name: email.split('@')[0],
-          source: 'legacy_guest_checkout',
+          character_type: quizData?.character_type,
+          body_type: quizData?.body_type,
+          ab_test_variant: quizData?.ab_test_variant,
+          source: 'payment_webhook',
           stripe_session_id: sessionId,
-          created_at: new Date().toISOString()
+          quiz_session_id: quizSessionId,
+          payment_completed_at: new Date().toISOString(),
+          created_via: 'zero_friction_payment'
         }
       });
 
       if (userError || !newUser.user) {
-        logger.error({ ...ctx, error: userError }, 'Failed to create user');
+        logger.error({ ...ctx, error: userError }, 'Failed to create user after payment');
         throw new Error('Failed to create user account');
       }
 
-      logger.info({ ...ctx, userId: newUser.user.id }, 'Created new user for legacy checkout');
+      logger.info({ ...ctx, userId: newUser.user.id }, 'Created new user after payment');
       userId = newUser.user.id;
     }
 
-    // Generate magic link for authentication (only for users who need it)
+    // Link quiz response to user
+    if (quizData) {
+      await supabase
+        .from('quiz_responses')
+        .update({ user_id: userId })
+        .eq('id', quizData.id);
+      
+      logger.info({ ...ctx, userId, quizId: quizData.id }, 'Linked quiz response to user');
+    }
+
+    // Generate auto sign-in session (NO AUTH WALL)
     const { data: authLink, error: authLinkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: email,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/home?welcome=premium`
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/home?welcome=premium&auto_signin=true`
       }
     });
 
     if (authLinkError || !authLink) {
-      logger.error({ ...ctx, error: authLinkError }, 'Failed to generate magic link');
+      logger.error({ ...ctx, error: authLinkError }, 'Failed to generate auto sign-in link');
       // Don't throw error - payment succeeded, just log the issue
-      logger.warn({ ...ctx, userId }, 'Payment processed but magic link generation failed');
+      logger.warn({ ...ctx, userId }, 'Payment processed but auto sign-in failed');
       return;
     }
 
-    // Store magic link token in user metadata for API lookup
-    const magicLinkToken = authLink.properties.action_link;
+    // Store auto sign-in URL for immediate redirect
+    const autoSignInUrl = authLink.properties.action_link;
     await supabase.auth.admin.updateUserById(userId, {
       user_metadata: {
         ...existingUser?.user_metadata, // Preserve existing metadata
-        magic_link_token: magicLinkToken,
+        auto_signin_url: autoSignInUrl,
         stripe_session_id: sessionId,
-        payment_completed_at: new Date().toISOString()
+        payment_completed_at: new Date().toISOString(),
+        auth_method: 'auto_signin_post_payment'
       }
     });
 
     logger.info({ 
       ...ctx, 
       userId,
-      magicLinkExists: !!magicLinkToken
-    }, '✅ Magic link generated and stored successfully');
+      hasAutoSignIn: !!autoSignInUrl
+    }, '✅ MONEY PRINTER: User created with auto sign-in after payment');
 
   } catch (error) {
-    logger.error({ ...ctx, error }, 'Failed to process guest checkout completion');
+    logger.error({ ...ctx, error }, 'Failed to process checkout completion');
     throw error;
   }
 }

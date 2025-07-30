@@ -140,15 +140,16 @@ export const POST = enhanceRouteHandler(
         returnUrl: body.successUrl,
         variantQuantities,
         metadata: {
-          // Critical metadata for post-payment user creation
+          // Critical metadata for post-payment user creation and auto sign-in
           source: body.source,
           email: body.email,
-          session: body.sessionId, // Changed from sessionId to session for consistency
+          quiz_session_id: body.sessionId, // Quiz session for linking quiz data
           planId: body.planId,
           character_type: body.metadata?.character_type || 'unknown',
           body_type: body.metadata?.body_type || 'unknown',
-          // Flag this as guest checkout
+          // Flag this as zero-friction checkout
           is_guest_checkout: 'true',
+          zero_friction_flow: 'true',
           // Store temp user info for webhook cleanup
           temp_user_id: tempUser.data.user.id,
           temp_email: tempEmail
@@ -165,11 +166,12 @@ export const POST = enhanceRouteHandler(
         metadataPassedToStripe: {
           source: body.source,
           email: body.email,
-          session: body.sessionId,
+          quiz_session_id: body.sessionId,
           planId: body.planId,
           character_type: body.metadata?.character_type || 'unknown',
           body_type: body.metadata?.body_type || 'unknown',
           is_guest_checkout: 'true',
+          zero_friction_flow: 'true',
           temp_user_id: tempUser.data.user.id,
           temp_email: tempEmail
         }

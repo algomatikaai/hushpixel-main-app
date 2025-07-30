@@ -187,6 +187,9 @@ importers:
       '@kit/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@kit/stripe':
+        specifier: workspace:*
+        version: link:../../packages/billing/stripe
       '@kit/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase

@@ -52,6 +52,7 @@
     "@kit/next": "workspace:*",
     "@kit/notifications": "workspace:*",
     "@kit/shared": "workspace:*",
+    "@kit/stripe": "workspace:*",
     "@kit/supabase": "workspace:*",
     "@kit/team-accounts": "workspace:*",
     "@kit/ui": "workspace:*",

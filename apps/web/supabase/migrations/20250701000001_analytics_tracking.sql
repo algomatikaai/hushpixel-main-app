@@ -262,12 +262,13 @@ create policy super_admins_access_user_behavior_analytics
     using (public.is_super_admin());
 
 -- Super admin access to generations table for analytics
-create policy super_admins_access_generations
-    on public.generations
-    as permissive
-    for select
-    to authenticated
-    using (public.is_super_admin());
+-- NOTE: This policy will be created when the generations table is created
+-- create policy super_admins_access_generations
+--     on public.generations
+--     as permissive
+--     for select
+--     to authenticated
+--     using (public.is_super_admin());
 
 -- Functions for analytics
 create or replace function public.track_user_event(
@@ -310,65 +311,66 @@ $$;
 grant execute on function public.track_user_event to authenticated, service_role;
 
 -- Function to calculate churn risk
-create or replace function public.calculate_churn_risk(target_user_id uuid)
-returns numeric(3,2)
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  days_since_last_generation integer;
-  generation_count integer;
-  subscription_age_days integer;
-  churn_score numeric(3,2) := 0;
-begin
-  -- Get days since last generation
-  select extract(day from current_timestamp - max(created_at))
-  into days_since_last_generation
-  from public.generations
-  where user_id = target_user_id;
-  
-  -- Get total generation count
-  select count(*)
-  into generation_count
-  from public.generations
-  where user_id = target_user_id;
-  
-  -- Get subscription age
-  select extract(day from current_timestamp - min(created_at))
-  into subscription_age_days
-  from public.subscriptions
-  where account_id = target_user_id and status = 'active';
-  
-  -- Calculate churn risk score (0-1)
-  if days_since_last_generation is null then
-    churn_score := 0.8; -- No generations yet
-  elsif days_since_last_generation > 30 then
-    churn_score := 0.9; -- Highly inactive
-  elsif days_since_last_generation > 14 then
-    churn_score := 0.6; -- Moderately inactive
-  elsif days_since_last_generation > 7 then
-    churn_score := 0.3; -- Slightly inactive
-  else
-    churn_score := 0.1; -- Active user
-  end if;
-  
-  -- Adjust based on generation count
-  if generation_count < 3 then
-    churn_score := churn_score + 0.2;
-  end if;
-  
-  -- Adjust based on subscription age
-  if subscription_age_days < 7 then
-    churn_score := churn_score + 0.1; -- New users have higher churn
-  end if;
-  
-  -- Cap at 1.0
-  return least(churn_score, 1.0);
-end;
-$$;
-
-grant execute on function public.calculate_churn_risk to authenticated, service_role;
+-- NOTE: This function will be created when the generations table is created
+-- create or replace function public.calculate_churn_risk(target_user_id uuid)
+-- returns numeric(3,2)
+-- language plpgsql
+-- security definer
+-- set search_path = ''
+-- as $$
+-- declare
+--   days_since_last_generation integer;
+--   generation_count integer;
+--   subscription_age_days integer;
+--   churn_score numeric(3,2) := 0;
+-- begin
+--   -- Get days since last generation
+--   select extract(day from current_timestamp - max(created_at))
+--   into days_since_last_generation
+--   from public.generations
+--   where user_id = target_user_id;
+--   
+--   -- Get total generation count
+--   select count(*)
+--   into generation_count
+--   from public.generations
+--   where user_id = target_user_id;
+--   
+--   -- Get subscription age
+--   select extract(day from current_timestamp - min(created_at))
+--   into subscription_age_days
+--   from public.subscriptions
+--   where account_id = target_user_id and status = 'active';
+--   
+--   -- Calculate churn risk score (0-1)
+--   if days_since_last_generation is null then
+--     churn_score := 0.8; -- No generations yet
+--   elsif days_since_last_generation > 30 then
+--     churn_score := 0.9; -- Highly inactive
+--   elsif days_since_last_generation > 14 then
+--     churn_score := 0.6; -- Moderately inactive
+--   elsif days_since_last_generation > 7 then
+--     churn_score := 0.3; -- Slightly inactive
+--   else
+--     churn_score := 0.1; -- Active user
+--   end if;
+--   
+--   -- Adjust based on generation count
+--   if generation_count < 3 then
+--     churn_score := churn_score + 0.2;
+--   end if;
+--   
+--   -- Adjust based on subscription age
+--   if subscription_age_days < 7 then
+--     churn_score := churn_score + 0.1; -- New users have higher churn
+--   end if;
+--   
+--   -- Cap at 1.0
+--   return least(churn_score, 1.0);
+-- end;
+-- $$;
+-- 
+-- grant execute on function public.calculate_churn_risk to authenticated, service_role;
 
 -- Function to refresh materialized view
 create or replace function public.refresh_business_intelligence()

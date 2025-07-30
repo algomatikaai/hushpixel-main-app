@@ -58,8 +58,8 @@ export async function submitQuizAction(data: z.infer<typeof QuizSubmissionSchema
         characterType: validatedData.characterType,
         bodyType: validatedData.bodyType,
         redirectUrl: result.generateUrl,
-        userId: result.userId,
-        isNewUser: result.isNewUser
+        userId: result.userId || null,  // Handle null userId properly
+        isNewUser: result.isNewUser || false  // Handle null isNewUser properly
       }
     };
   } catch (error) {
