@@ -63,7 +63,7 @@ export const POST = enhanceRouteHandler(
     }, 'Quiz submission completed - LEAD CAPTURED (no user creation)');
 
     // Generate URL for anonymous generation (no auth required)
-    const generateUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/generate?session=${sessionId}&email=${encodeURIComponent(email)}&source=${source || 'quiz'}`;
+    const generateUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/generate?session=${sessionId}&email=${encodeURIComponent(email)}&character=${responses.character_type}&body=${responses.body_type}&source=${source || 'quiz'}`;
 
     return NextResponse.json({
       success: true,

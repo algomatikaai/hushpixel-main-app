@@ -38,7 +38,7 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
       .from('quiz_responses')
       .select('*')
       .eq('session_id', session)
-      .eq('email', decodeURIComponent(email))
+      .eq('email', email)
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
@@ -51,7 +51,7 @@ export default async function GeneratePage({ searchParams }: GeneratePageProps) 
             <QuizAutoGenerate 
               character={quizData.character_type}
               body={quizData.body_type}
-              email={decodeURIComponent(email)}
+              email={email}
               session={session}
               isAuthenticated={false}
               userId={null}

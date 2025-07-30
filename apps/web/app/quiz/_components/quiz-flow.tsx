@@ -60,40 +60,8 @@ export function QuizFlow() {
             session_id: result.data.sessionId,
           });
           
-          // Store session data including user info for authentication
-          localStorage.setItem('hushpixel_session', JSON.stringify({
-            sessionId: result.data.sessionId,
-            email: result.data.email,
-            characterType: result.data.characterType,
-            bodyType: result.data.bodyType,
-            userId: result.data.userId,
-            isNewUser: result.data.isNewUser,
-            timestamp: Date.now(),
-            autoCreated: true
-          }));
-          
-          // For new users, trigger auto-signin before redirect
-          if (result.data.isNewUser && result.data.userId) {
-            try {
-              const signinResponse = await fetch('/api/quiz/auto-signin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: result.data.userId })
-              });
-              
-              const signinData = await signinResponse.json();
-              
-              if (signinData.success && signinData.authUrl) {
-                // Redirect to auth URL which will sign in and redirect to generate
-                window.location.href = signinData.authUrl;
-                return;
-              }
-            } catch (signinError) {
-              console.warn('Auto-signin failed, using fallback redirect:', signinError);
-            }
-          }
-          
-          // Fallback: redirect to generate page (existing users or auto-signin failed)
+          // ZERO FRICTION FLOW: Direct redirect to generate page
+          console.log('🚀 Redirecting to generate page:', result.data.redirectUrl);
           window.location.href = result.data.redirectUrl;
         } else {
           toast.error('Failed to save quiz data. Please try again.');
