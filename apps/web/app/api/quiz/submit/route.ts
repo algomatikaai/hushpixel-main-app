@@ -36,7 +36,7 @@ export const POST = enhanceRouteHandler(
     // Generate A/B test variant (50/50 split)
     const abTestVariant = Math.random() < 0.5 ? 'free_trial' : 'direct_paywall';
 
-    // Store quiz responses for lead capture (NO user creation)
+    // Store quiz responses for lead capture (NO user creation) - MINIMAL VERSION
     const { data: quizData, error: quizError } = await supabase
       .from('quiz_responses')
       .insert({
@@ -44,10 +44,8 @@ export const POST = enhanceRouteHandler(
         email,
         character_type: responses.character_type,
         body_type: responses.body_type,
-        personality: responses.personality,
-        source: source || 'quiz',
-        // ab_test_variant: abTestVariant, // TEMPORARILY DISABLED - column doesn't exist in production
-        user_id: null // No user created yet - will be linked after payment
+        source: source || 'quiz'
+        // Removed personality and ab_test_variant and user_id - testing minimal insert
       })
       .select()
       .single();
